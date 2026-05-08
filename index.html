@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openclaw — proof chain</title>
+    <meta
+      name="description"
+      content="Public read-only view of the openclaw proof chain: cartorio merkle ledger + bundle expansion + browser-side verification."
+    />
+    <!--
+      Runtime configuration injected by the deploy chart via a small
+      script tag rendered before this body. Locally we read import.meta.env
+      via shared/config.ts; in production a /config.js shim from the
+      ConfigMap sets window.__OPENCLAW_RUNTIME_CONFIG__.
+    -->
+    <script>
+      window.__OPENCLAW_RUNTIME_CONFIG__ = window.__OPENCLAW_RUNTIME_CONFIG__ || {};
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
