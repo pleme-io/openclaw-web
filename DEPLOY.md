@@ -24,33 +24,39 @@ Cloudflare Edge ─TLS─▶ openclaw-pleme-dev tunnel
 | Cartorio CORS support | `cartorio@v0.6.0` | live on ghcr |
 | Cartorio + openclaw-web Helm charts | `helmworks/charts/{lareira-cartorio,lareira-openclaw-web}` | published to `oci://ghcr.io/pleme-io/charts` |
 | Pleme-dev helmrelease consumes both | `k8s/clusters/pleme-dev/apps/openclaw/helmrelease.yaml` | committed |
-| Pangea tunnel workspace | `pangea-architectures/workspaces/cloudflare-pleme-dev-tunnel/` | committed |
+| Pangea tunnel template | `pangea-architectures/workspaces/cloudflare-pleme/openclaw_tunnel.{rb,yaml}` (folded into the shared cloudflare-pleme workspace) | committed |
 | Cloudflared k8s deployment | `k8s/clusters/pleme-dev/apps/openclaw-tunnel/` | committed |
 
 ## What you need to do once (3 manual steps)
 
-### 1. Apply the pangea tunnel workspace
+### 1. Apply the openclaw tunnel template (in the existing Cloudflare workspace)
+
+The openclaw tunnel is a second template inside the shared
+`workspaces/cloudflare-pleme/` workspace — same Cloudflare account,
+same API token, separate tunnel.
 
 ```bash
-cd ~/code/github/pleme-io/pangea-architectures/workspaces/cloudflare-pleme-dev-tunnel
-PLATFORM=pleme nix run .#deploy
+cd ~/code/github/pleme-io/pangea-architectures/workspaces/cloudflare-pleme
+export CLOUDFLARE_API_TOKEN=$(cd ../../../nix && sops -d \
+  --extract '["cloudflare"]["api-token"]' secrets.yaml)
+bundle exec pangea apply openclaw_tunnel.rb
 ```
 
-This creates the `openclaw-pleme-dev` Cloudflare tunnel + ingress
-config + the two CNAME records pointing at it.
+This creates the `openclaw-pleme-dev` Cloudflare tunnel + its ingress
+config + the two CNAME records `cartorio.dev.use1.quero.cloud` and
+`openclaw.dev.use1.quero.cloud`.
 
-### 2. Capture the tunnel token + write back to account.yaml
+### 2. Construct the cloudflared TUNNEL_TOKEN
 
 ```bash
-TID=$(tofu -chdir=$HOME/.pangea/workspaces/production/cloudflare-pleme-dev-tunnel output -raw tunnel_id)
-TOKEN=$(tofu -chdir=$HOME/.pangea/workspaces/production/cloudflare-pleme-dev-tunnel output -raw tunnel_token)
-
-# Update account.yaml so subsequent applies are stable
-sed -i '' "s/^tunnel_id: .*/tunnel_id: \"$TID\"/" account.yaml
-git add account.yaml && git commit -m "cloudflare-pleme-dev-tunnel: persist tunnel_id from first apply"
+TID=$(bundle exec pangea output -t openclaw_tunnel tunnel_id)
+TSECRET=$(bundle exec pangea output -t openclaw_tunnel tunnel_secret)
+AID=$(bundle exec pangea output -t openclaw_tunnel account_id)
+TOKEN=$(printf '{"a":"%s","t":"%s","s":"%s"}' "$AID" "$TID" "$TSECRET" \
+        | base64 | tr -d '\n')
 ```
 
-### 3. Materialize the cloudflared token Secret (SOPS-encrypted)
+### 3. Materialize the cloudflared Secret (SOPS-encrypted)
 
 ```bash
 cd ~/code/github/pleme-io/k8s
@@ -68,11 +74,8 @@ sops --encrypt /tmp/cloudflared-token.yaml \
   > clusters/pleme-dev/apps/openclaw-tunnel/cloudflared-token.sops.yaml
 rm /tmp/cloudflared-token.yaml
 
-# Wire it into the kustomization (uncomment the line):
 sed -i '' 's|# - cloudflared-token.sops.yaml|- cloudflared-token.sops.yaml|' \
   clusters/pleme-dev/apps/openclaw-tunnel/kustomization.yaml
-
-# Drop the placeholder
 rm clusters/pleme-dev/apps/openclaw-tunnel/cloudflared-token.sops.yaml.placeholder
 
 git add -A && git commit -m "openclaw-tunnel: materialize cloudflared-token from pangea apply" && git push
