@@ -2,7 +2,7 @@
  * Runtime configuration.
  *
  * Source of truth, in order:
- *   1. window.__OPENCLAW_RUNTIME_CONFIG__  (production: ConfigMap → /config.js)
+ *   1. window.__OPENCLAW_RUNTIME_CONFIG__  (production: ConfigMap → /env.js)
  *   2. import.meta.env.VITE_*              (dev: .env.local)
  *   3. Built-in fallbacks for `vite dev`
  *

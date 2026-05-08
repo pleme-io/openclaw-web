@@ -9,14 +9,16 @@
       content="Public read-only view of the openclaw proof chain: cartorio merkle ledger + bundle expansion + browser-side verification."
     />
     <!--
-      Runtime configuration injected by the deploy chart via a small
-      script tag rendered before this body. Locally we read import.meta.env
-      via shared/config.ts; in production a /config.js shim from the
-      ConfigMap sets window.__OPENCLAW_RUNTIME_CONFIG__.
+      Runtime configuration injected by the deploy chart via /env.js
+      (lilitu pattern — hanabi's preflight checks for this exact filename
+      under server.static_dir; the file is supplied as a ConfigMap mount).
+      Locally /env.js 404s and shared/config.ts falls back to
+      import.meta.env.VITE_* / built-in defaults.
     -->
     <script>
       window.__OPENCLAW_RUNTIME_CONFIG__ = window.__OPENCLAW_RUNTIME_CONFIG__ || {};
     </script>
+    <script src="/env.js"></script>
   </head>
   <body>
     <div id="root"></div>
