@@ -10,16 +10,12 @@
     };
   };
 
-  outputs = inputs @ { flake-parts, ... }:
+  outputs = inputs @ { flake-parts, nixpkgs, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" "x86_64-darwin" ];
 
       perSystem = { pkgs, ... }: let
         node = pkgs.nodejs_20;
-        # Minimal dev shell. M0 of the build chain: dev + type-check
-        # + vite build all run from inside this shell. M1 (Phase 4 of
-        # PLAN.md) wires substrate's mkViteBuild + mkNodeDockerImage
-        # for the production OCI image.
         webShell = pkgs.mkShell {
           packages = [ node pkgs.git ];
           shellHook = ''
@@ -27,41 +23,69 @@
             echo "openclaw-web dev shell — node $(node --version), npm $(npm --version)"
           '';
         };
+
+        # Per-Linux-arch image derivation. When this flake is evaluated
+        # from darwin and a darwin user runs `nix build .#dockerImage-amd64`,
+        # the derivation has system=x86_64-linux and nix dispatches it
+        # to a registered builder via /etc/nix/machines (rio in our
+        # cluster). Same shape as cartorio.
+        mkImage = targetSystem: tagSuffix: let
+          xpkgs = import nixpkgs { system = targetSystem; };
+          xspa = xpkgs.buildNpmPackage {
+            pname = "openclaw-web";
+            version = "0.1.0";
+            src = pkgs.lib.cleanSource ./.;
+            npmDepsHash = "sha256-6pYtu8pBjMHiweCFPTnlGdJawWroqUlkoddDyU5+uO4=";
+            npmFlags = [ "--legacy-peer-deps" ];
+            dontNpmPrune = true;
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              cp -r dist/* $out/
+              runHook postInstall
+            '';
+          };
+        in xpkgs.dockerTools.buildLayeredImage {
+          name = "openclaw-web";
+          tag = tagSuffix;
+          contents = [ xpkgs.cacert ];
+          extraCommands = ''
+            mkdir -p usr/share/nginx/html
+            cp -r ${xspa}/* usr/share/nginx/html/
+            mkdir -p etc/nginx
+            cat > etc/nginx/nginx.conf <<'EOF'
+            worker_processes 1;
+            events { worker_connections 1024; }
+            http {
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+              sendfile on; keepalive_timeout 65; gzip on;
+              gzip_types text/css application/javascript application/json image/svg+xml;
+              server {
+                listen 80;
+                root /usr/share/nginx/html;
+                index index.html;
+                location / { try_files $uri $uri/ /index.html; }
+                # Chart ConfigMap mounts /config.js at runtime; serve
+                # no-cache so a pod restart picks up value changes
+                # without re-baking the image.
+                location = /config.js { add_header Cache-Control "no-store" always; }
+              }
+            }
+            EOF
+          '';
+          config = {
+            Cmd = [ "${xpkgs.nginx}/bin/nginx" "-c" "/etc/nginx/nginx.conf" "-g" "daemon off;" ];
+            ExposedPorts = { "80/tcp" = {}; };
+          };
+        };
       in {
         devShells.default = webShell;
-
-        apps.dev = {
-          type = "app";
-          program = "${pkgs.writeShellScript "openclaw-web-dev" ''
-            export PATH="${node}/bin:$PATH"
-            cd "''${PWD}"
-            if [ ! -d node_modules ]; then
-              echo "→ installing dependencies"
-              ${node}/bin/npm install
-            fi
-            exec ${node}/bin/npm run dev
-          ''}";
-        };
-
-        apps.build = {
-          type = "app";
-          program = "${pkgs.writeShellScript "openclaw-web-build" ''
-            export PATH="${node}/bin:$PATH"
-            cd "''${PWD}"
-            ${node}/bin/npm install
-            exec ${node}/bin/npm run build
-          ''}";
-        };
-
-        apps.type-check = {
-          type = "app";
-          program = "${pkgs.writeShellScript "openclaw-web-tc" ''
-            export PATH="${node}/bin:$PATH"
-            cd "''${PWD}"
-            ${node}/bin/npm install
-            exec ${node}/bin/npm run type-check
-          ''}";
-        };
+        # Image packages — uniform across all systems. Each derivation
+        # requires its own target system; nix.distributedBuilds dispatches
+        # to the appropriate registered builder.
+        packages.dockerImage-amd64 = mkImage "x86_64-linux"  "amd64-latest";
+        packages.dockerImage-arm64 = mkImage "aarch64-linux" "arm64-latest";
       };
     };
 }
