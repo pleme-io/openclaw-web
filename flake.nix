@@ -90,8 +90,22 @@
             cp -r ${spa}/* app/static/
             chmod -R 755 app/static
           '';
-          # Inherit fromImage's Cmd / WorkingDir / Env — hanabi already
-          # has /bin/hanabi as CMD and /app/static as WorkingDir.
+          # dockerTools.buildLayeredImage does NOT inherit Cmd /
+          # WorkingDir / Env from fromImage — restate explicitly.
+          # Layout matches hanabi's own service image.
+          config = {
+            Cmd = [ "/bin/hanabi" ];
+            WorkingDir = "/app/static";
+            ExposedPorts = {
+              "80/tcp" = {};
+              "8080/tcp" = {};
+            };
+            Env = [
+              "NODE_ENV=production"
+              "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+            ];
+            User = "web";
+          };
         };
       in {
         devShells.default = webShell;
