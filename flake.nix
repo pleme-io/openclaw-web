@@ -50,22 +50,33 @@
           tag = tagSuffix;
           contents = [ xpkgs.cacert ];
           extraCommands = ''
-            mkdir -p usr/share/nginx/html
+            mkdir -p usr/share/nginx/html var/log/nginx var/cache/nginx tmp
+            chmod 0777 var/log/nginx var/cache/nginx tmp
             cp -r ${xspa}/* usr/share/nginx/html/
             mkdir -p etc/nginx
-            cat > etc/nginx/nginx.conf <<'EOF'
+            cat > etc/nginx/nginx.conf <<EOF
             worker_processes 1;
+            error_log /dev/stderr info;
+            pid /tmp/nginx.pid;
             events { worker_connections 1024; }
             http {
-              include /etc/nginx/mime.types;
+              # Use the mime.types shipped with the nixpkgs nginx
+              # build (substitution happens at template render).
+              include ${xpkgs.nginx}/conf/mime.types;
               default_type application/octet-stream;
+              access_log /dev/stdout;
+              client_body_temp_path /tmp/client_body 1 2;
+              proxy_temp_path /tmp/proxy 1 2;
+              fastcgi_temp_path /tmp/fastcgi 1 2;
+              uwsgi_temp_path /tmp/uwsgi 1 2;
+              scgi_temp_path /tmp/scgi 1 2;
               sendfile on; keepalive_timeout 65; gzip on;
               gzip_types text/css application/javascript application/json image/svg+xml;
               server {
                 listen 80;
                 root /usr/share/nginx/html;
                 index index.html;
-                location / { try_files $uri $uri/ /index.html; }
+                location / { try_files \$uri \$uri/ /index.html; }
                 # Chart ConfigMap mounts /config.js at runtime; serve
                 # no-cache so a pod restart picks up value changes
                 # without re-baking the image.
