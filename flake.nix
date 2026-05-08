@@ -4,8 +4,45 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-parts.url = "github:hercules-ci/flake-parts";
+
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    crate2nix = {
+      url = "github:nix-community/crate2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     substrate = {
       url = "github:pleme-io/substrate";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
+    };
+
+    forge = {
+      url = "github:pleme-io/forge";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
+      inputs.crate2nix.follows = "crate2nix";
+      inputs.substrate.follows = "substrate";
+    };
+
+    # Hanabi BFF + libraries — pinned to the same revs lilitu/web uses.
+    # Hanabi's Cargo.nix references ../../libraries/rust/crates/... so
+    # we materialize a merged source tree (mergedHanabiSrc) before
+    # running crate2nix. Lilitu's web-services.nix is the reference.
+    hanabi = {
+      url = "github:pleme-io/hanabi/7b8944b31396d15532aecdbd54100d7a4908fec5";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
+      inputs.crate2nix.follows = "crate2nix";
+      inputs.substrate.follows = "substrate";
+      inputs.forge.follows = "forge";
+    };
+
+    libraries = {
+      url = "github:pleme-io/libraries/f22542ef27413a0d5a0c86377d80d92c4b31c9e7";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -14,8 +51,99 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" "x86_64-darwin" ];
 
-      perSystem = { pkgs, ... }: let
+      perSystem = { pkgs, system, ... }: let
         node = pkgs.nodejs_20;
+
+        nixLibHost = inputs.substrate.libFor {
+          inherit pkgs system;
+        };
+
+        # Target pkgs factory with Rust overlay (crate2nix needs it).
+        mkTargetPkgs = targetSystem:
+          import nixpkgs {
+            system = targetSystem;
+            overlays = [
+              (nixLibHost.mkRustOverlay {
+                fenix = inputs.fenix;
+                system = targetSystem;
+              })
+            ];
+          };
+
+        archTag = {
+          "x86_64-linux" = "amd64";
+          "aarch64-linux" = "arm64";
+        };
+
+        # Merged hanabi source: hanabi's Cargo.nix references workspace
+        # paths like ../../libraries/rust/crates/... — recreate that
+        # layout under one $out so crate2nix can resolve everything.
+        mergedHanabiSrc = pkgs.runCommand "hanabi-merged-src" {} ''
+          mkdir -p $out/pkgs/platform
+          ln -s ${inputs.hanabi} $out/pkgs/platform/hanabi
+          ln -s ${inputs.libraries} $out/pkgs/libraries
+        '';
+
+        # Per-arch hanabi binary via crate2nix (musl static link).
+        mkHanabi = targetSystem: let
+          targetPkgs = mkTargetPkgs targetSystem;
+          arch = archTag.${targetSystem};
+          muslTarget =
+            if arch == "arm64" then "aarch64-unknown-linux-musl"
+            else "x86_64-unknown-linux-musl";
+          envUpper =
+            if arch == "arm64" then "AARCH64_UNKNOWN_LINUX_MUSL"
+            else "X86_64_UNKNOWN_LINUX_MUSL";
+          cargoNix = mergedHanabiSrc + "/pkgs/platform/hanabi/Cargo.nix";
+          project = import cargoNix {
+            pkgs = targetPkgs;
+            defaultCrateOverrides = targetPkgs.defaultCrateOverrides // {
+              hanabi = oldAttrs: {
+                nativeBuildInputs = (oldAttrs.nativeBuildInputs or [])
+                  ++ (with targetPkgs; [ cmake perl git ]);
+                CARGO_BUILD_TARGET = muslTarget;
+                "CARGO_TARGET_${envUpper}_RUSTFLAGS" =
+                  "-C target-feature=+crt-static -C link-arg=-s";
+              };
+            };
+          };
+        in
+          if project ? workspaceMembers
+          then project.workspaceMembers.hanabi.build
+          else project.rootCrate.build;
+
+        # SPA — vite-built dist/. Arch-independent (pure JS).
+        mkSpa = targetPkgs: targetPkgs.buildNpmPackage {
+          pname = "openclaw-web";
+          version = "0.1.0";
+          src = pkgs.lib.cleanSource ./.;
+          npmDepsHash = "sha256-6pYtu8pBjMHiweCFPTnlGdJawWroqUlkoddDyU5+uO4=";
+          npmFlags = [ "--legacy-peer-deps" ];
+          dontNpmPrune = true;
+          installPhase = ''
+            runHook preInstall
+            mkdir -p $out
+            cp -r dist/* $out/
+            runHook postInstall
+          '';
+        };
+
+        # Final image: substrate's mkNodeDockerImage with the
+        # crate2nix-built hanabi binary + spa. Same recipe as lilitu/web.
+        mkImage = targetSystem: let
+          targetPkgs = mkTargetPkgs targetSystem;
+          nixLibTarget = inputs.substrate.libFor {
+            pkgs = targetPkgs;
+            system = targetSystem;
+          };
+        in nixLibTarget.mkNodeDockerImage {
+          appName = "openclaw-web";
+          builtApp = mkSpa targetPkgs;
+          webServer = mkHanabi targetSystem;
+          architecture = archTag.${targetSystem};
+          tag = "${archTag.${targetSystem}}-latest";
+        };
+
         webShell = pkgs.mkShell {
           packages = [ node pkgs.git ];
           shellHook = ''
@@ -23,93 +151,10 @@
             echo "openclaw-web dev shell — node $(node --version), npm $(npm --version)"
           '';
         };
-
-        # Per-Linux-arch image derivation. When this flake is evaluated
-        # from darwin and a darwin user runs `nix build .#dockerImage-amd64`,
-        # the derivation has system=x86_64-linux and nix dispatches it
-        # to a registered builder via /etc/nix/machines (rio in our
-        # cluster). Same shape as cartorio.
-        mkImage = targetSystem: tagSuffix: let
-          xpkgs = import nixpkgs { system = targetSystem; };
-          xspa = xpkgs.buildNpmPackage {
-            pname = "openclaw-web";
-            version = "0.1.0";
-            src = pkgs.lib.cleanSource ./.;
-            npmDepsHash = "sha256-6pYtu8pBjMHiweCFPTnlGdJawWroqUlkoddDyU5+uO4=";
-            npmFlags = [ "--legacy-peer-deps" ];
-            dontNpmPrune = true;
-            installPhase = ''
-              runHook preInstall
-              mkdir -p $out
-              cp -r dist/* $out/
-              runHook postInstall
-            '';
-          };
-        in xpkgs.dockerTools.buildLayeredImage {
-          name = "openclaw-web";
-          tag = tagSuffix;
-          contents = [ xpkgs.cacert ];
-          extraCommands = ''
-            mkdir -p usr/share/nginx/html var/log/nginx var/cache/nginx tmp etc
-            chmod 0777 var/log/nginx var/cache/nginx tmp
-            cp -r ${xspa}/* usr/share/nginx/html/
-            # Minimal passwd / group so nginx's getpwnam("nobody") +
-            # equivalent group lookup find a legal entry. The image
-            # runs as PID-1 root anyway; we just need the lookups to
-            # succeed.
-            cat > etc/passwd <<'EOF_PASSWD'
-            root:x:0:0:root:/root:/bin/false
-            nobody:x:65534:65534:Nobody:/:/bin/false
-            EOF_PASSWD
-            cat > etc/group <<'EOF_GROUP'
-            root:x:0:
-            nobody:x:65534:
-            nogroup:x:65534:
-            EOF_GROUP
-            mkdir -p etc/nginx
-            cat > etc/nginx/nginx.conf <<EOF
-            worker_processes 1;
-            error_log /dev/stderr info;
-            pid /tmp/nginx.pid;
-            events { worker_connections 1024; }
-            http {
-              # Use the mime.types shipped with the nixpkgs nginx
-              # build (substitution happens at template render).
-              include ${xpkgs.nginx}/conf/mime.types;
-              default_type application/octet-stream;
-              access_log /dev/stdout;
-              client_body_temp_path /tmp/client_body 1 2;
-              proxy_temp_path /tmp/proxy 1 2;
-              fastcgi_temp_path /tmp/fastcgi 1 2;
-              uwsgi_temp_path /tmp/uwsgi 1 2;
-              scgi_temp_path /tmp/scgi 1 2;
-              sendfile on; keepalive_timeout 65; gzip on;
-              gzip_types text/css application/javascript application/json image/svg+xml;
-              server {
-                listen 80;
-                root /usr/share/nginx/html;
-                index index.html;
-                location / { try_files \$uri \$uri/ /index.html; }
-                # Chart ConfigMap mounts /config.js at runtime; serve
-                # no-cache so a pod restart picks up value changes
-                # without re-baking the image.
-                location = /config.js { add_header Cache-Control "no-store" always; }
-              }
-            }
-            EOF
-          '';
-          config = {
-            Cmd = [ "${xpkgs.nginx}/bin/nginx" "-c" "/etc/nginx/nginx.conf" "-g" "daemon off;" ];
-            ExposedPorts = { "80/tcp" = {}; };
-          };
-        };
       in {
         devShells.default = webShell;
-        # Image packages — uniform across all systems. Each derivation
-        # requires its own target system; nix.distributedBuilds dispatches
-        # to the appropriate registered builder.
-        packages.dockerImage-amd64 = mkImage "x86_64-linux"  "amd64-latest";
-        packages.dockerImage-arm64 = mkImage "aarch64-linux" "arm64-latest";
+        packages.dockerImage-amd64 = mkImage "x86_64-linux";
+        packages.dockerImage-arm64 = mkImage "aarch64-linux";
       };
     };
 }

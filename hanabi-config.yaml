@@ -1,0 +1,33 @@
+# Minimal hanabi config — static-serve only.
+#
+# Mounted by the lareira-openclaw-web chart at /etc/hanabi/config.yaml
+# (ConfigMap). Hanabi v0.x reads this to know what server to start.
+# We disable the BFF features (no GraphQL, no auth, no DB), keeping
+# only the static-file path + health endpoints.
+
+environment: production
+
+security:
+  csp:
+    api_domains: []
+    ws_domains: []
+    additional_connect_src:
+      - https://cartorio.dev.use1.quero.cloud  # the openclaw-web fetches go here
+
+server:
+  listen_address: "0.0.0.0"
+  port: 80
+  health_port: 8080
+  worker_threads: 0  # tokio default
+  service_name: openclaw-web
+
+static:
+  root: /app/static
+  spa_fallback: true       # serve index.html for unknown paths
+  spa_fallback_path: index.html
+
+features:
+  enable_bff: false        # NO graphql / NO auth / NO DB
+  enable_metrics: true
+  enable_detailed_health_checks: true
+  enable_bug_reports: false
