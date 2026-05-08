@@ -4,44 +4,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-parts.url = "github:hercules-ci/flake-parts";
-
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    crate2nix = {
-      url = "github:nix-community/crate2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     substrate = {
       url = "github:pleme-io/substrate";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-    };
-
-    forge = {
-      url = "github:pleme-io/forge";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-      inputs.crate2nix.follows = "crate2nix";
-      inputs.substrate.follows = "substrate";
-    };
-
-    # Pinned to the same rev lilitu/web is on. Hanabi exposes its full
-    # service docker tarball (hanabi-service.tar.gz with WorkingDir
-    # /app/static + Cmd /bin/hanabi). We layer our SPA on top of that
-    # tarball — gets every passwd/SSL/SPA-fallback affordance hanabi
-    # already proves out, without dragging hanabi's full source build
-    # chain (200-line lilitu/web recipe with merged-src + musl crate2nix).
-    hanabi = {
-      url = "github:pleme-io/hanabi/7b8944b31396d15532aecdbd54100d7a4908fec5";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-      inputs.crate2nix.follows = "crate2nix";
-      inputs.substrate.follows = "substrate";
-      inputs.forge.follows = "forge";
     };
   };
 
@@ -49,7 +14,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" "x86_64-darwin" ];
 
-      perSystem = { pkgs, system, ... }: let
+      perSystem = { pkgs, ... }: let
         node = pkgs.nodejs_20;
         webShell = pkgs.mkShell {
           packages = [ node pkgs.git ];
@@ -59,14 +24,14 @@
           '';
         };
 
-        mkImage = arch: let
-          targetSystem = if arch == "amd64" then "x86_64-linux" else "aarch64-linux";
+        # Per-Linux-arch image derivation. When this flake is evaluated
+        # from darwin and a darwin user runs `nix build .#dockerImage-amd64`,
+        # the derivation has system=x86_64-linux and nix dispatches it
+        # to a registered builder via /etc/nix/machines (rio in our
+        # cluster). Same shape as cartorio.
+        mkImage = targetSystem: tagSuffix: let
           xpkgs = import nixpkgs { system = targetSystem; };
-          # The hanabi service tarball, used as our base layer. CMD =
-          # /bin/hanabi, WorkingDir = /app/static, user `web`, SSL +
-          # passwd already correct. We just drop our dist/ on top.
-          hanabiBase = inputs.hanabi.packages.${targetSystem}."dockerImage-${arch}";
-          spa = xpkgs.buildNpmPackage {
+          xspa = xpkgs.buildNpmPackage {
             pname = "openclaw-web";
             version = "0.1.0";
             src = pkgs.lib.cleanSource ./.;
@@ -82,41 +47,69 @@
           };
         in xpkgs.dockerTools.buildLayeredImage {
           name = "openclaw-web";
-          tag = "${arch}-latest";
-          fromImage = hanabiBase;
-          contents = [ ];
+          tag = tagSuffix;
+          contents = [ xpkgs.cacert ];
           extraCommands = ''
-            mkdir -p app/static
-            cp -r ${spa}/* app/static/
-            chmod -R 755 app/static
+            mkdir -p usr/share/nginx/html var/log/nginx var/cache/nginx tmp etc
+            chmod 0777 var/log/nginx var/cache/nginx tmp
+            cp -r ${xspa}/* usr/share/nginx/html/
+            # Minimal passwd / group so nginx's getpwnam("nobody") +
+            # equivalent group lookup find a legal entry. The image
+            # runs as PID-1 root anyway; we just need the lookups to
+            # succeed.
+            cat > etc/passwd <<'EOF_PASSWD'
+            root:x:0:0:root:/root:/bin/false
+            nobody:x:65534:65534:Nobody:/:/bin/false
+            EOF_PASSWD
+            cat > etc/group <<'EOF_GROUP'
+            root:x:0:
+            nobody:x:65534:
+            nogroup:x:65534:
+            EOF_GROUP
+            mkdir -p etc/nginx
+            cat > etc/nginx/nginx.conf <<EOF
+            worker_processes 1;
+            error_log /dev/stderr info;
+            pid /tmp/nginx.pid;
+            events { worker_connections 1024; }
+            http {
+              # Use the mime.types shipped with the nixpkgs nginx
+              # build (substitution happens at template render).
+              include ${xpkgs.nginx}/conf/mime.types;
+              default_type application/octet-stream;
+              access_log /dev/stdout;
+              client_body_temp_path /tmp/client_body 1 2;
+              proxy_temp_path /tmp/proxy 1 2;
+              fastcgi_temp_path /tmp/fastcgi 1 2;
+              uwsgi_temp_path /tmp/uwsgi 1 2;
+              scgi_temp_path /tmp/scgi 1 2;
+              sendfile on; keepalive_timeout 65; gzip on;
+              gzip_types text/css application/javascript application/json image/svg+xml;
+              server {
+                listen 80;
+                root /usr/share/nginx/html;
+                index index.html;
+                location / { try_files \$uri \$uri/ /index.html; }
+                # Chart ConfigMap mounts /config.js at runtime; serve
+                # no-cache so a pod restart picks up value changes
+                # without re-baking the image.
+                location = /config.js { add_header Cache-Control "no-store" always; }
+              }
+            }
+            EOF
           '';
-          # dockerTools.buildLayeredImage does NOT inherit Cmd /
-          # WorkingDir / Env from fromImage — restate explicitly.
-          # Layout matches hanabi's own service image.
           config = {
-            Cmd = [ "/bin/hanabi" ];
-            WorkingDir = "/app/static";
-            ExposedPorts = {
-              "80/tcp" = {};
-              "8080/tcp" = {};
-            };
-            Env = [
-              "NODE_ENV=production"
-              "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-            ];
-            # Numeric UID skips containerd's /etc/passwd lookup. With
-            # `User = "web"` containerd opens /etc/passwd at container-
-            # create time and bombs because fromImage's base passwd
-            # isn't visible in the merged tmpmount the way layered
-            # contents are. 101:101 is the substrate-canonical web
-            # user UID hanabi's mkWebUserSetup writes.
-            User = "101:101";
+            Cmd = [ "${xpkgs.nginx}/bin/nginx" "-c" "/etc/nginx/nginx.conf" "-g" "daemon off;" ];
+            ExposedPorts = { "80/tcp" = {}; };
           };
         };
       in {
         devShells.default = webShell;
-        packages.dockerImage-amd64 = mkImage "amd64";
-        packages.dockerImage-arm64 = mkImage "arm64";
+        # Image packages — uniform across all systems. Each derivation
+        # requires its own target system; nix.distributedBuilds dispatches
+        # to the appropriate registered builder.
+        packages.dockerImage-amd64 = mkImage "x86_64-linux"  "amd64-latest";
+        packages.dockerImage-arm64 = mkImage "aarch64-linux" "arm64-latest";
       };
     };
 }
