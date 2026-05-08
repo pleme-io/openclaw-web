@@ -1,0 +1,22 @@
+# nix
+result
+result-*
+.direnv/
+
+# typescript / vite
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# bun
+.bun/
+
+# editor / scratch
+.idea/
+.vscode/
+.DS_Store
+.claude/
+
+# generated
+src/routeTree.gen.ts.bak
