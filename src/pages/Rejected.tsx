@@ -21,15 +21,21 @@ const KIND_COLOR: Record<string, 'primary' | 'secondary' | 'warning' | 'default'
   skill: 'default',
 };
 
+// Truncated-digest column width — tuned to fit on a typical desktop
+// breakpoint without wrapping. Same value used in the slice + the
+// length check below.
+const DIGEST_DISPLAY_LEN = 24;
+
 // Map a cartorio rejection message to a one-line "why blocked" badge.
-// String-based for now — cartorio v0.7+ will return a structured
-// reason_code; until then this gives operators the same UX.
+// Substring-matched against cartorio's free-text ApiError.message.
+// cartorio v0.7+ will surface a structured `reason_code` on the
+// rejection record; this function is the bridge until then.
 function reasonBadge(message: string): { label: string; color: 'error' | 'warning' } {
   if (message.includes('recomposed') || message.includes('signed_root.root')) {
     return { label: 'state-leaf-mismatch', color: 'error' };
   }
-  if (message.includes('signature') || message.includes('signed_root.signature')) {
-    return { label: 'signature-not-allowlisted', color: 'error' };
+  if (message.includes('signature')) {
+    return { label: 'signature-rejected', color: 'error' };
   }
   if (message.includes('result_hash')) {
     return { label: 'compliance-attestation-mismatch', color: 'error' };
@@ -41,6 +47,11 @@ function reasonBadge(message: string): { label: string; color: 'error' | 'warnin
     return { label: 'duplicate-digest', color: 'warning' };
   }
   return { label: 'rejected', color: 'error' };
+}
+
+function truncateDigest(d: string | null): string {
+  if (!d) return '—';
+  return d.length > DIGEST_DISPLAY_LEN ? `${d.slice(0, DIGEST_DISPLAY_LEN)}…` : d;
 }
 
 export function Rejected() {
@@ -129,11 +140,7 @@ export function Rejected() {
                     </TableCell>
                     <TableCell>{r.attempted_name ?? '—'}</TableCell>
                     <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {r.attempted_digest
-                        ? r.attempted_digest.length > 24
-                          ? `${r.attempted_digest.slice(0, 24)}…`
-                          : r.attempted_digest
-                        : '—'}
+                      {truncateDigest(r.attempted_digest)}
                     </TableCell>
                     <TableCell>
                       <Chip label={r.status} color="error" size="small" variant="outlined" />
