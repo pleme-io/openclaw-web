@@ -12,7 +12,7 @@ security:
     api_domains: []
     ws_domains: []
     additional_connect_src:
-      - https://cartorio.dev.use1.quero.cloud  # the openclaw-web fetches go here
+      - https://cartorio-dev.quero.cloud  # the openclaw-web fetches go here
 
 server:
   listen_address: "0.0.0.0"

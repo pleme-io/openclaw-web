@@ -76,15 +76,15 @@ Outside this repo:
 
 1. **Cartorio CORS** — bump cartorio:
    - Add `tower-http`'s `CorsLayer` permitting
-     `https://openclaw.dev.use1.quero.cloud` (read-only methods only).
+     `https://openclaw-dev.quero.cloud` (read-only methods only).
    - Cut a 0.6.x release.
 2. **Cartorio ingress** — bump `lareira-cartorio`:
    - Add `ingress.enabled: bool` and `ingress.host: string` values.
-   - Default off; pleme-dev sets enabled + `cartorio.dev.use1.quero.cloud`.
+   - Default off; pleme-dev sets enabled + `cartorio-dev.quero.cloud`.
 3. **`lareira-openclaw-web` chart** (new):
    - Wraps `pleme-web` library chart.
    - Pulls `ghcr.io/pleme-io/openclaw-web:amd64-…`.
-   - `ingress.host: openclaw.dev.use1.quero.cloud`.
+   - `ingress.host: openclaw-dev.quero.cloud`.
    - Config injection via `ConfigMap` → `window.__OPENCLAW_CARTORIO_URL__`
      (lilitu's web-runtime-configuration pattern).
 4. **Umbrella update** — `lareira-openclaw-stack`:
@@ -110,7 +110,7 @@ Outside this repo:
 
 ## Done definition
 
-A judge visiting `https://openclaw.dev.use1.quero.cloud` can:
+A judge visiting `https://openclaw-dev.quero.cloud` can:
 - See the merkle root + 7+ artifacts + audit-consistency = healthy.
 - Click into the bundle, see its 2 members + their pack_hashes.
 - Drag the alpine manifest file in; the page rehashes it client-side

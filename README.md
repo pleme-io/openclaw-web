@@ -6,7 +6,7 @@
 
 ## What it shows
 
-A visitor at `https://openclaw.dev.use1.quero.cloud` sees:
+A visitor at `https://openclaw-dev.quero.cloud` sees:
 
 1. **Merkle root** — `state_root`, `event_root`, `ledger_root`, artifact count, audit-consistency badge.
 2. **Artifact ledger** — every admitted artifact with its `(digest, profile, result_hash)` triple. Image / helm / bundle entries side by side.
@@ -45,7 +45,7 @@ Mirrors `lilitu/web` (the canonical TS frontend in pleme-io):
   This is read-only public data; no value in a hanabi shim.
 - **No publish action exposed.** Demo is read-only end-to-end.
 - **Hostname** via `nix/lib/fleet-domains.nix::mkHostname`:
-  `openclaw.dev.use1.quero.cloud` (4-part shape per fleet rule).
+  `openclaw-dev.quero.cloud` (4-part shape per fleet rule).
 
 ## Sibling repos in the proof chain
 

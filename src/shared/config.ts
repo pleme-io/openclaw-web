@@ -16,7 +16,7 @@ declare global {
 }
 
 export interface RuntimeConfig {
-  /** Cartorio's public REST base URL, e.g. https://cartorio.dev.use1.quero.cloud */
+  /** Cartorio's public REST base URL, e.g. https://cartorio-dev.quero.cloud */
   cartorioUrl: string;
 }
 

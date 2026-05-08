@@ -1,6 +1,6 @@
 # Deploying openclaw-web publicly on pleme-dev
 
-End-to-end: hackathon visitor lands at `https://openclaw.dev.use1.quero.cloud`,
+End-to-end: hackathon visitor lands at `https://openclaw-dev.quero.cloud`,
 sees cartorio's merkle ledger, drag-drops a manifest in the Verify tab.
 
 ```
@@ -8,10 +8,10 @@ Cloudflare Edge ─TLS─▶ openclaw-pleme-dev tunnel
                        │
                        ▼  cloudflared (k8s pod in `cloudflared` ns)
                        │
-                       ├─▶ openclaw.dev.use1.quero.cloud
+                       ├─▶ openclaw-dev.quero.cloud
                        │      → openclaw-stack-openclaw-web.openclaw.svc:80  (the SPA)
                        │
-                       └─▶ cartorio.dev.use1.quero.cloud
+                       └─▶ cartorio-dev.quero.cloud
                               → openclaw-stack-cartorio.openclaw.svc:8082  (REST API)
 ```
 
@@ -43,8 +43,8 @@ bundle exec pangea apply openclaw_tunnel.rb
 ```
 
 This creates the `openclaw-pleme-dev` Cloudflare tunnel + its ingress
-config + the two CNAME records `cartorio.dev.use1.quero.cloud` and
-`openclaw.dev.use1.quero.cloud`.
+config + the two CNAME records `cartorio-dev.quero.cloud` and
+`openclaw-dev.quero.cloud`.
 
 ### 2. Construct the cloudflared TUNNEL_TOKEN
 
@@ -118,11 +118,11 @@ non-empty content and the SPA shows real proofs.
 ## Verification
 
 ```bash
-curl -I https://cartorio.dev.use1.quero.cloud/health           # 200 ok
-curl -sS https://cartorio.dev.use1.quero.cloud/api/v1/merkle/root | jq
+curl -I https://cartorio-dev.quero.cloud/health           # 200 ok
+curl -sS https://cartorio-dev.quero.cloud/api/v1/merkle/root | jq
 
 # In a browser:
-open https://openclaw.dev.use1.quero.cloud
+open https://openclaw-dev.quero.cloud
 ```
 
 ## Outstanding architectural debt

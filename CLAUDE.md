@@ -68,11 +68,11 @@ shape and are not exposed by this app's UI.
 Tracked as gates outside this repo:
 
 1. `cartorio` adds `tower-http::cors::CorsLayer` allowing
-   `https://openclaw.dev.use1.quero.cloud`. Bumps cartorio.
+   `https://openclaw-dev.quero.cloud`. Bumps cartorio.
 2. `lareira-cartorio` chart grows `ingress.enabled` (and a
-   `host: cartorio.dev.use1.quero.cloud` value).
+   `host: cartorio-dev.quero.cloud` value).
 3. `lareira-openclaw-web` chart (new) wraps `pleme-web` library
-   chart, pulls this image, ingress at `openclaw.dev.use1.quero.cloud`.
+   chart, pulls this image, ingress at `openclaw-dev.quero.cloud`.
 4. `lareira-openclaw-stack` umbrella adds `web:` alias for the new
    chart.
 5. pleme-dev's `helmrelease.yaml` consumes the new umbrella version.
