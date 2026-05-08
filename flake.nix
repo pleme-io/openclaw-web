@@ -104,7 +104,13 @@
               "NODE_ENV=production"
               "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
             ];
-            User = "web";
+            # Numeric UID skips containerd's /etc/passwd lookup. With
+            # `User = "web"` containerd opens /etc/passwd at container-
+            # create time and bombs because fromImage's base passwd
+            # isn't visible in the merged tmpmount the way layered
+            # contents are. 101:101 is the substrate-canonical web
+            # user UID hanabi's mkWebUserSetup writes.
+            User = "101:101";
           };
         };
       in {
