@@ -64,6 +64,7 @@
             cat > etc/group <<'EOF_GROUP'
             root:x:0:
             nobody:x:65534:
+            nogroup:x:65534:
             EOF_GROUP
             mkdir -p etc/nginx
             cat > etc/nginx/nginx.conf <<EOF
