@@ -50,9 +50,21 @@
           tag = tagSuffix;
           contents = [ xpkgs.cacert ];
           extraCommands = ''
-            mkdir -p usr/share/nginx/html var/log/nginx var/cache/nginx tmp
+            mkdir -p usr/share/nginx/html var/log/nginx var/cache/nginx tmp etc
             chmod 0777 var/log/nginx var/cache/nginx tmp
             cp -r ${xspa}/* usr/share/nginx/html/
+            # Minimal passwd / group so nginx's getpwnam("nobody") +
+            # equivalent group lookup find a legal entry. The image
+            # runs as PID-1 root anyway; we just need the lookups to
+            # succeed.
+            cat > etc/passwd <<'EOF_PASSWD'
+            root:x:0:0:root:/root:/bin/false
+            nobody:x:65534:65534:Nobody:/:/bin/false
+            EOF_PASSWD
+            cat > etc/group <<'EOF_GROUP'
+            root:x:0:
+            nobody:x:65534:
+            EOF_GROUP
             mkdir -p etc/nginx
             cat > etc/nginx/nginx.conf <<EOF
             worker_processes 1;
