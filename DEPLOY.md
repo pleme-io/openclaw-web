@@ -87,6 +87,31 @@ kubectl --context pleme-dev -n flux-system annotate gitrepository/flux-system \
 
 Cloudflared rolls; ~30 seconds later the two hostnames serve.
 
+### 5. Seed cartorio with demo content
+
+Cartorio in pleme-dev runs `--backend memory` (the published image was
+not built with `--features sqlite`; substrate's `rust-service-flake.nix`
+needs a `cargoFeatures` arg to thread that through — tracked separately).
+Memory backend wipes on every pod restart, so right after a Helm
+upgrade or pod evict, the SPA renders an empty ledger.
+
+Re-seed by running tabeliao against the live cartorio:
+
+```bash
+# port-forward into the cluster
+kubectl --context pleme-dev -n openclaw port-forward svc/openclaw-stack-cartorio 8082:8082 &
+kubectl --context pleme-dev -n openclaw port-forward svc/openclaw-stack-lacre 8083:8083 &
+kubectl --context pleme-dev -n openclaw port-forward svc/openclaw-stack-backing-registry 5000:5000 &
+
+cd ~/code/github/pleme-io/tabeliao
+# real demo recipe — alpine image into bundled zot, helm chart from
+# ghcr, bundle binding both. See tests/real_openclaw_e2e.rs.
+cargo test --release --test real_openclaw_e2e -- --nocapture
+```
+
+After this completes, `GET /api/v1/artifacts` against cartorio returns
+non-empty content and the SPA shows real proofs.
+
 ## Verification
 
 ```bash
@@ -96,3 +121,12 @@ curl -sS https://cartorio.dev.use1.quero.cloud/api/v1/merkle/root | jq
 # In a browser:
 open https://openclaw.dev.use1.quero.cloud
 ```
+
+## Outstanding architectural debt
+
+| Item | Where | Why it matters |
+|---|---|---|
+| `cargoFeatures` arg in `rust-service-flake.nix` | `pleme-io/substrate` | Lets cartorio's published image ship with `--features sqlite` so the merkle ledger survives pod restarts. Today's demo wipes on any reconcile. |
+| Cloudflare-pleme-dev-tunnel as a flake flow | `pleme-io/pangea-architectures` `flake.nix` | Currently unregistered; `nix run .#deploy-cloudflare-pleme-dev-tunnel` doesn't exist. Operator has to invoke pangea via bundle exec instead of the canonical `nix run` entry point. |
+| Backing-registry is `auth.backend: none` | helmrelease values | Anonymous pulls work; production hardening would wire OIDC + lacre-only writes. Fine for the demo. |
+| No ingress controller on pleme-dev k3s | n/a | Cloudflare Tunnel routes directly to k8s Services so this is moot for the demo, but makes the chart's `Ingress` resources orphans. |
