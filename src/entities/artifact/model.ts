@@ -101,3 +101,22 @@ export const AuditConsistencyResponseSchema = z.object({
   healthy: z.boolean(),
 });
 export type AuditConsistencyResponse = z.infer<typeof AuditConsistencyResponseSchema>;
+
+// Rejection log — every 4xx admit attempt cartorio rejected. Surfaces
+// on the SPA's "Rejected" tab as tamper-evidence.
+export const RejectionRecordSchema = z.object({
+  recorded_at: z.string(),
+  status: z.number().int(),
+  kind: z.string().nullable(),
+  attempted_name: z.string().nullable(),
+  attempted_digest: z.string().nullable(),
+  message: z.string(),
+});
+export type RejectionRecord = z.infer<typeof RejectionRecordSchema>;
+
+export const RejectionsResponseSchema = z.object({
+  rejections: z.array(RejectionRecordSchema),
+  total: z.number().int().nonnegative(),
+  capacity: z.number().int().nonnegative(),
+});
+export type RejectionsResponse = z.infer<typeof RejectionsResponseSchema>;

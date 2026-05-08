@@ -13,6 +13,7 @@ export const queryKeys = {
   artifact: (id: string) => ['cartorio', 'artifact', id] as const,
   artifactByDigest: (digest: string) => ['cartorio', 'artifact-by-digest', digest] as const,
   auditConsistency: ['cartorio', 'audit-consistency'] as const,
+  rejections: ['cartorio', 'rejections'] as const,
 };
 
 export const useMerkleRoot = () =>
@@ -50,4 +51,11 @@ export const useAuditConsistency = () =>
     queryKey: queryKeys.auditConsistency,
     queryFn: cartorio.auditConsistency,
     refetchInterval: 60_000,
+  });
+
+export const useRejections = () =>
+  useQuery({
+    queryKey: queryKeys.rejections,
+    queryFn: cartorio.rejections,
+    refetchInterval: 30_000,
   });

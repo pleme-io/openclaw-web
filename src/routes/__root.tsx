@@ -20,6 +20,9 @@ function RootComponent() {
             <Button component={Link} to="/artifacts" color="inherit">
               Artifacts
             </Button>
+            <Button component={Link} to="/rejected" color="inherit">
+              Rejected
+            </Button>
             <Button component={Link} to="/verify" color="inherit">
               Verify
             </Button>

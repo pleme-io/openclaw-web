@@ -39,10 +39,12 @@ import {
   ArtifactsResponseSchema,
   AuditConsistencyResponseSchema,
   MerkleRootSchema,
+  RejectionsResponseSchema,
   type Artifact,
   type ArtifactsResponse,
   type AuditConsistencyResponse,
   type MerkleRoot,
+  type RejectionsResponse,
 } from '@/entities/artifact/model';
 
 export const cartorio = {
@@ -61,4 +63,7 @@ export const cartorio = {
     request('/api/v1/admin/audit-consistency', AuditConsistencyResponseSchema, {
       method: 'POST',
     }),
+
+  rejections: (): Promise<RejectionsResponse> =>
+    request('/api/v1/admin/rejections', RejectionsResponseSchema),
 };

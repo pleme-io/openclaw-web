@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as RejectedRouteImport } from './routes/rejected'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArtifactsIndexRouteImport } from './routes/artifacts.index'
 import { Route as ArtifactsIdRouteImport } from './routes/artifacts.$id'
@@ -17,6 +18,11 @@ import { Route as ArtifactsIdRouteImport } from './routes/artifacts.$id'
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RejectedRoute = RejectedRouteImport.update({
+  id: '/rejected',
+  path: '/rejected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +43,14 @@ const ArtifactsIdRoute = ArtifactsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/rejected': typeof RejectedRoute
   '/verify': typeof VerifyRoute
   '/artifacts/$id': typeof ArtifactsIdRoute
   '/artifacts/': typeof ArtifactsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/rejected': typeof RejectedRoute
   '/verify': typeof VerifyRoute
   '/artifacts/$id': typeof ArtifactsIdRoute
   '/artifacts': typeof ArtifactsIndexRoute
@@ -50,20 +58,28 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/rejected': typeof RejectedRoute
   '/verify': typeof VerifyRoute
   '/artifacts/$id': typeof ArtifactsIdRoute
   '/artifacts/': typeof ArtifactsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/verify' | '/artifacts/$id' | '/artifacts/'
+  fullPaths: '/' | '/rejected' | '/verify' | '/artifacts/$id' | '/artifacts/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/verify' | '/artifacts/$id' | '/artifacts'
-  id: '__root__' | '/' | '/verify' | '/artifacts/$id' | '/artifacts/'
+  to: '/' | '/rejected' | '/verify' | '/artifacts/$id' | '/artifacts'
+  id:
+    | '__root__'
+    | '/'
+    | '/rejected'
+    | '/verify'
+    | '/artifacts/$id'
+    | '/artifacts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RejectedRoute: typeof RejectedRoute
   VerifyRoute: typeof VerifyRoute
   ArtifactsIdRoute: typeof ArtifactsIdRoute
   ArtifactsIndexRoute: typeof ArtifactsIndexRoute
@@ -76,6 +92,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify'
       preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rejected': {
+      id: '/rejected'
+      path: '/rejected'
+      fullPath: '/rejected'
+      preLoaderRoute: typeof RejectedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,6 +127,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RejectedRoute: RejectedRoute,
   VerifyRoute: VerifyRoute,
   ArtifactsIdRoute: ArtifactsIdRoute,
   ArtifactsIndexRoute: ArtifactsIndexRoute,
