@@ -19,7 +19,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { EVENTS, type EventData, Joyride, STATUS, type Step } from 'react-joyride';
 
-const STORAGE_KEY = 'openclaw-tour-seen-v3';
+const STORAGE_KEY = 'openclaw-tour-seen-v5';
 const START_EVENT = 'openclaw:start-tour';
 
 // Step shape with route metadata. react-joyride forwards `data` through
@@ -164,12 +164,43 @@ const STEPS: TourStep[] = [
     data: { route: '/explain' },
   },
   {
+    target: '#s4',
+    title: 'A concrete openclaw scenario',
+    content: (
+      <>
+        AI agents like openclaw have wide attack surface, wide deployment, and frequent updates — so
+        &ldquo;compliant before deployment&rdquo; has to be a cryptographic gate, not a procedural
+        one. Section 4 walks through an end-to-end FedRAMP-High openclaw release: pack runs{' '}
+        <em>before</em> publish, admit happens <em>before</em> the registry sees the bytes, lacre
+        gates <em>before</em> the cluster pulls. There is no point at which someone says
+        &ldquo;trust me.&rdquo;
+      </>
+    ),
+    data: { route: '/explain' },
+  },
+  {
     target: '[data-tour="explain-toc"]',
     title: 'Jump anywhere',
     content: (
       <>
-        Click any chip to jump to a section. That&apos;s the tour — explore freely now. You can
-        replay anytime via <strong>Take tour</strong> in the top nav.
+        Click any chip to jump to a section, or scroll all the way down for the &ldquo;where to go
+        next&rdquo; box with links to the real openclaw and the pleme-io repos that secure it.
+      </>
+    ),
+    data: { route: '/explain' },
+  },
+  {
+    target: '[data-tour="next-stop"]',
+    title: 'See the real openclaw',
+    content: (
+      <>
+        The openclaw agent in this demo is a real, widely-deployed open-source AI assistant —{' '}
+        <a href="https://github.com/openclaw/openclaw" target="_blank" rel="noreferrer">
+          github.com/openclaw/openclaw
+        </a>
+        . The pleme-io repos that secure it are linked here too: openclaw-scanner,
+        openclaw-publisher-pki, tameshi-openclaw, plus the four-repo chain itself (cartorio, provas,
+        tabeliao, lacre). Replay anytime via <strong>Take tour</strong> in the top nav.
       </>
     ),
     data: { route: '/explain' },

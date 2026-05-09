@@ -6,6 +6,7 @@ import HubIcon from '@mui/icons-material/Hub';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import LinkIcon from '@mui/icons-material/Link';
 import SearchIcon from '@mui/icons-material/Search';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import UploadIcon from '@mui/icons-material/Upload';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import {
@@ -285,15 +286,16 @@ const TOC: Array<{ n: number; title: string }> = [
   { n: 1, title: 'The problem (plain language)' },
   { n: 2, title: 'The solution (plain language)' },
   { n: 3, title: 'Why these data structures' },
-  { n: 4, title: 'CIRCIA — the regulatory frame' },
-  { n: 5, title: 'The receipt' },
-  { n: 6, title: 'What a merkle tree is' },
-  { n: 7, title: 'Cartorio’s dual-tree shape' },
-  { n: 8, title: 'Modifier matrix' },
-  { n: 9, title: 'Flow A — admit' },
-  { n: 10, title: 'Flow B — verify offline' },
-  { n: 11, title: 'Flow C — tamper rejection' },
-  { n: 12, title: 'The four-repo chain' },
+  { n: 4, title: 'Why openclaw needs this — the FedRAMP-High scenario' },
+  { n: 5, title: 'CIRCIA — the regulatory frame' },
+  { n: 6, title: 'The receipt' },
+  { n: 7, title: 'What a merkle tree is' },
+  { n: 8, title: 'Cartorio’s dual-tree shape' },
+  { n: 9, title: 'Modifier matrix' },
+  { n: 10, title: 'Flow A — admit' },
+  { n: 11, title: 'Flow B — verify offline' },
+  { n: 12, title: 'Flow C — tamper rejection' },
+  { n: 13, title: 'The four-repo chain' },
 ];
 
 const MODIFIERS: Array<{
@@ -617,7 +619,227 @@ export function Explain() {
         </P>
       </Section>
 
-      <Section n={4} icon={<GavelIcon color="primary" />} title="CIRCIA — the regulatory frame">
+      <Section
+        n={4}
+        icon={<SmartToyIcon color="primary" />}
+        title="Why openclaw needs this — the FedRAMP-High scenario"
+      >
+        <ELI5>
+          Openclaw is an AI agent. AI agents read your files, run your code, reach out to your
+          network, and adapt their behavior on every update. They&apos;re also <em>everywhere</em> —
+          when an agent ships a new version, it can be on tens of thousands of machines within
+          hours. So if a tampered version slips through, the blast radius is much bigger than for
+          ordinary software. Now imagine a regulated environment (a hospital, a defense contractor,
+          a federal agency) where openclaw can&apos;t deploy unless it&apos;s formally proven to
+          meet a baseline like <strong>FedRAMP High</strong>. That proof can&apos;t be a sticker —
+          it has to be a receipt anyone can re- derive, attached to the bytes themselves, before the
+          bytes ever reach the registry.
+        </ELI5>
+        <P>
+          Three things about openclaw (and any agent in its class) make ungated, trust-me compliance
+          unsafe:
+        </P>
+        <Typography component="ul" sx={{ mb: 2, pl: 3 }}>
+          <li>
+            <strong>Wide attack surface.</strong> The agent can read files, execute commands,
+            install dependencies, fetch model outputs, mount MCP servers, and call out to APIs.
+            Every capability is a blast vector if the bytes are tampered.
+          </li>
+          <li>
+            <strong>Wide deployment.</strong> One image runs across many tenants. A single
+            compromised tag means a single compromise point reaches all of them at once. Most update
+            channels propagate in minutes.
+          </li>
+          <li>
+            <strong>Frequent updates.</strong> Models change, prompts change, tool catalogs change,
+            MCP servers change. Each update is a fresh opportunity for a supply-chain compromise —
+            or simply for an update to drift out of compliance without anyone noticing.
+          </li>
+        </Typography>
+        <P>
+          So &ldquo;was openclaw v2.0 FedRAMP-High compliant when it was deployed?&rdquo; isn&apos;t
+          an audit-time question — it&apos;s a deployment-time gate. The chain below shows how the
+          four-repo system makes that gate cryptographic, not procedural.
+        </P>
+
+        <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
+          The end-to-end story for an openclaw v2.0 release
+        </Typography>
+        <Diagram>{`Goal: openclaw v2.0 must be provably FedRAMP-High compliant
+       BEFORE it ever reaches the registry — so a non-compliant
+       version cannot be pulled, even by accident.
+
+═══════════════════════════════════════════════════════════════
+
+[1] PRE-PUBLISH (publisher's machine, fail-closed)
+    ───────────────────────────────────────────────────────────
+    tabeliao runs the curated provas pack
+       fedramp-high-openclaw-image@2
+    against the freshly-built bytes:
+
+      ✓ NIST 800-53 SR-4   (provenance: nix closure hash)
+      ✓ NIST 800-53 SI-7   (software/firmware integrity: BLAKE3)
+      ✓ NIST 800-53 CM-6   (configuration settings)
+      ✓ NIST 800-53 AU-2/3 (audit log capture)
+      ✓ image-level CIS    (rootless, no setuid, sealed FS)
+      ✓ openclaw-specific  (allowed-tools manifest, MCP allowlist,
+                            no plaintext secret env vars, etc.)
+
+    pack_hash = BLAKE3(test_id || version || outcome || evidence)
+
+    Any test fails  →  publish ABORTED on this machine.
+    No bytes leave the workstation.
+
+[2] ADMIT  (POST /api/v1/artifacts to cartorio)
+    ───────────────────────────────────────────────────────────
+    tabeliao bakes the pack_hash into an AdmitArtifactInput:
+       digest      = sha256(image bytes)
+       profile     = "fedramp-high-openclaw-image@2"
+       result_hash = pack_hash
+       signed_root = Ed25519(composed_root)
+
+    cartorio recomputes composed_root from the declared fields
+    and refuses if anything doesn't match — if the publisher
+    declared "compliant" but the recomputed root differs, the
+    request is REJECTED and lands on the /rejected tab.
+
+    Successful admit ⇒ a row in the merkle ledger that says:
+       "openclaw v2.0 (sha256:...) was admitted at 2026-05-08T...
+        with FedRAMP-High pack v2 result_hash X, signed by Y."
+
+[3] REGISTRY GATE  (lacre, on every PUT manifest)
+    ───────────────────────────────────────────────────────────
+    The OCI registry sits behind lacre. On any push:
+       lacre hashes the manifest body (tag-spoof can't bypass)
+       lacre asks cartorio: "is this digest Active?"
+       if NO  → 403, image cannot enter the registry
+       if YES → forward upstream
+
+    Result: there is no way to land openclaw v2.0 in the
+    registry without a valid FedRAMP-High admit on file.
+    "Pushed but not admitted" is structurally impossible.
+
+[4] DEPLOY-TIME  (production cluster, on pull)
+    ───────────────────────────────────────────────────────────
+    Ops asks cartorio: "is digest sha256:... still Active and
+    FedRAMP-High compliant?" — answers in microseconds with an
+    inclusion proof anyone can verify offline. Continuous
+    re-attestation by the scanner emits Reattest events; if a
+    new vulnerability lands, the scanner emits Quarantine and
+    the next deploy is BLOCKED at the gate.
+
+[5] INCIDENT  (months later, regulator calls)
+    ───────────────────────────────────────────────────────────
+    "Which openclaw was running, when was it last verified, with
+    which pack?" — cartorio answers in microseconds with a
+    receipt the regulator can re-derive themselves. No SIEM
+    trawl, no engineering hours, no trust required.`}</Diagram>
+
+        <P>
+          The load-bearing word above is <strong>BEFORE</strong>: pack runs BEFORE publish, admit
+          happens BEFORE the registry sees the bytes, lacre gates BEFORE the cluster pulls. Every
+          step is a fail-closed cryptographic check. There is no point at which someone can say
+          &ldquo;trust me, it&apos;s compliant&rdquo; — at every step the system either has the
+          receipt or it refuses.
+        </P>
+
+        <Deeper title="NIST 800-53 Rev 5 control mapping (FedRAMP-High baseline)">
+          <P>
+            FedRAMP High inherits the NIST 800-53 Rev 5 High baseline (about 410 controls). The
+            cartorio + provas + tabeliao + lacre stack speaks directly to a load-bearing subset for
+            any agent in openclaw&apos;s class:
+          </P>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>Control family / ID</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Requirement</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Where it&apos;s satisfied</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>SR-4</TableCell>
+                  <TableCell>Provenance of supply-chain elements</TableCell>
+                  <TableCell>
+                    Nix closure hash bound to digest in the AdmitArtifactInput state-leaf
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>SI-7</TableCell>
+                  <TableCell>Software, firmware &amp; information integrity</TableCell>
+                  <TableCell>
+                    BLAKE3 composed_root + Ed25519 signed_root + lacre push gate
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>CM-2 / CM-3 / CM-6 / CM-8</TableCell>
+                  <TableCell>Baseline configuration, change control, settings, inventory</TableCell>
+                  <TableCell>
+                    Every artifact + every transition is a leaf in the event tree; inventory
+                    derivable from current state tree
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>AU-2 / AU-3 / AU-6 / AU-9 / AU-10</TableCell>
+                  <TableCell>
+                    Auditable events, content, review, protection, non- repudiation
+                  </TableCell>
+                  <TableCell>
+                    Append-only event log + merkle root + Ed25519 signatures per modifier class
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>SC-12</TableCell>
+                  <TableCell>Cryptographic key establishment &amp; management</TableCell>
+                  <TableCell>
+                    Per-modifier-class Ed25519 allow-list (publisher / PKI / scanner / operator)
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>AC-3 / AC-6</TableCell>
+                  <TableCell>Access enforcement, least privilege</TableCell>
+                  <TableCell>
+                    24-cell modifier × transition matrix (publisher cannot revoke; scanner cannot
+                    reactivate; etc.)
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Typography sx={{ mt: 2, mb: 2 }}>
+            The same primitives also map cleanly to <strong>CMMC Level 3</strong> (DFARS
+            252.204-7012 + 800-171), <strong>EO 14028</strong> / <strong>OMB M-22-18</strong>{' '}
+            (federal supply-chain attestation), and <strong>SOC 2 Type II</strong> CC7 / CC8 (change
+            management + integrity). The provas pack is the policy; cartorio is the evidence; lacre
+            is the enforcement.
+          </Typography>
+        </Deeper>
+
+        <Deeper title="Why this is structurally different from sign-and-pray">
+          <P>
+            Today&apos;s common pattern is &ldquo;sign the image with cosign, verify the signature
+            at admission, trust the rest.&rdquo; That says <em>who</em> built the image, but not{' '}
+            <em>whether the image passes any specific compliance check</em>. The signature can be
+            valid and the image still non-compliant — because cosign attestations are free-text and
+            carry no re-derivable test outcome.
+          </P>
+          <P>
+            The provas <code>result_hash</code> is different: it&apos;s the BLAKE3 of the
+            deterministic test-outcome stream. Same input (bytes + pack source) → same output. An
+            auditor can re-run the pack against the bytes and confirm the hash matches. There is no
+            fudging — the test either runs or it doesn&apos;t.
+          </P>
+          <P>
+            Combine that with lacre at the registry door (&ldquo;no admit, no push&rdquo;), and the
+            chain becomes structurally fail-closed: non-compliant openclaw cannot enter the
+            registry, cannot be pulled, cannot run.
+          </P>
+        </Deeper>
+      </Section>
+
+      <Section n={5} icon={<GavelIcon color="primary" />} title="CIRCIA — the regulatory frame">
         <ELI5>
           Imagine the regulator calling at 3 AM: &ldquo;You had an incident. Tell me, in 72 hours,
           exactly which version of which thing was running, whether it was passing your compliance
@@ -699,7 +921,7 @@ export function Explain() {
 
       {/* ─── 1. The receipt ────────────────────────────────────────── */}
       <Section
-        n={5}
+        n={6}
         icon={<VerifiedIcon color="primary" />}
         title="The receipt — three fields, no trust required"
       >
@@ -750,7 +972,7 @@ attestation.compliance.result_hash  ─── BLAKE3 over the deterministic
 
       {/* ─── 2. What a merkle tree is ──────────────────────────────── */}
       <Section
-        n={6}
+        n={7}
         icon={<AccountTreeIcon color="primary" />}
         title="What a merkle tree is — pairwise hashing, all the way up"
       >
@@ -792,7 +1014,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 3. Cartorio's dual-tree shape ─────────────────────────── */}
       <Section
-        n={7}
+        n={8}
         icon={<HubIcon color="primary" />}
         title="Cartorio's dual-tree shape — what IS, plus what HAPPENED"
       >
@@ -854,7 +1076,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 4. Modifier matrix ────────────────────────────────────── */}
       <Section
-        n={8}
+        n={9}
         icon={<GavelIcon color="primary" />}
         title="Modifier matrix — who is allowed to do what"
       >
@@ -906,7 +1128,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 5. Flow A — admit ─────────────────────────────────────── */}
       <Section
-        n={9}
+        n={10}
         icon={<UploadIcon color="primary" />}
         title="Flow A — admit (publisher → cartorio)"
       >
@@ -970,7 +1192,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 6. Flow B — verify offline ─────────────────────────────── */}
       <Section
-        n={10}
+        n={11}
         icon={<SearchIcon color="primary" />}
         title="Flow B — verify offline (consumer → cartorio → pure function)"
       >
@@ -1058,7 +1280,7 @@ async fn check_artifact_admitted(
 
       {/* ─── 7. Flow C — tamper rejection ────────────────────────── */}
       <Section
-        n={11}
+        n={12}
         icon={<BlockIcon color="primary" />}
         title="Flow C — tamper rejection (the table that pays the rent)"
       >
@@ -1128,7 +1350,7 @@ async fn check_artifact_admitted(
 
       {/* ─── 8. Four-repo chain ──────────────────────────────────── */}
       <Section
-        n={12}
+        n={13}
         icon={<LinkIcon color="primary" />}
         title="The four-repo chain — provas / tabeliao / cartorio / lacre"
       >
@@ -1188,6 +1410,136 @@ async fn check_artifact_admitted(
           </P>
         </Deeper>
       </Section>
+
+      {/* ─── Where to go next ─────────────────────────────────────── */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          borderLeftWidth: 4,
+          borderLeftColor: 'success.main',
+          bgcolor: 'success.50',
+        }}
+        data-tour="next-stop"
+      >
+        <Typography variant="overline" color="success.dark" sx={{ fontWeight: 700 }}>
+          Where to go next
+        </Typography>
+        <Typography variant="h5" sx={{ mt: 1, mb: 2, fontWeight: 600 }}>
+          See the real openclaw — and the pleme-io repos that secure it.
+        </Typography>
+        <Typography sx={{ mb: 2 }}>
+          The openclaw agent shown throughout this demo is a real, widely-deployed open-source AI
+          assistant. Below are the actual public repositories: the agent itself, plus the pleme-io
+          components that make the proof chain you just walked through.
+        </Typography>
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The artifact" size="small" color="primary" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a href="https://github.com/openclaw/openclaw" target="_blank" rel="noreferrer">
+                  openclaw/openclaw
+                </a>{' '}
+                — the AI agent itself (
+                <a href="https://openclaw.ai" target="_blank" rel="noreferrer">
+                  openclaw.ai
+                </a>
+                )
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Your own personal AI assistant. Any OS. Any Platform. The lobster way. Wide
+                deployment + frequent updates is exactly why a cryptographic compliance gate
+                matters.
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The scanner" size="small" color="warning" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a
+                  href="https://github.com/pleme-io/openclaw-scanner"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  pleme-io/openclaw-scanner
+                </a>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                The continuous-compliance daemon. Re-runs the provas pack on a schedule against
+                every admitted openclaw image; emits Reattest events on success, Quarantine on
+                failure. The modifier-matrix &ldquo;Scanner&rdquo; row in section 9 is literally
+                this repo.
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The PKI" size="small" color="error" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a
+                  href="https://github.com/pleme-io/openclaw-publisher-pki"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  pleme-io/openclaw-publisher-pki
+                </a>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Publisher enrollment + signed CRL for the openclaw skill-store ecosystem. Cascades
+                publisher cert revocations into cartorio via the modifier-matrix &ldquo;PKI&rdquo;
+                row.
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The integration" size="small" color="success" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a
+                  href="https://github.com/pleme-io/tameshi-openclaw"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  pleme-io/tameshi-openclaw
+                </a>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                The integration crate that wires openclaw into the tameshi
+                deterministic-integrity-attestation ecosystem. The compose- state-leaf-root
+                primitive cartorio uses lives upstream in tameshi.
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The ledger" size="small" color="primary" variant="outlined" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a href="https://github.com/pleme-io/cartorio" target="_blank" rel="noreferrer">
+                  pleme-io/cartorio
+                </a>{' '}
+                ·{' '}
+                <a href="https://github.com/pleme-io/provas" target="_blank" rel="noreferrer">
+                  provas
+                </a>{' '}
+                ·{' '}
+                <a href="https://github.com/pleme-io/tabeliao" target="_blank" rel="noreferrer">
+                  tabeliao
+                </a>{' '}
+                ·{' '}
+                <a href="https://github.com/pleme-io/lacre" target="_blank" rel="noreferrer">
+                  lacre
+                </a>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                The four-repo chain itself — the system this whole tour was about. Open-source; you
+                can run cartorio against your own artifact stream tomorrow.
+              </Typography>
+            </Box>
+          </Stack>
+        </Stack>
+      </Paper>
 
       {/* ─── Glossary ────────────────────────────────────────────── */}
       <Accordion variant="outlined" disableGutters>
