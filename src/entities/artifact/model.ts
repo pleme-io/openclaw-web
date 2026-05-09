@@ -120,3 +120,31 @@ export const RejectionsResponseSchema = z.object({
   capacity: z.number().int().nonnegative(),
 });
 export type RejectionsResponse = z.infer<typeof RejectionsResponseSchema>;
+
+// Inclusion proof — wire format from cartorio's
+// `GET /api/v1/artifacts/{id}/proof`. Verifiable offline by walking
+// `steps[]` upward from `leaf`, BLAKE3-pair-hashing with each sibling
+// according to `side` (cartorio's `verify_inclusion_proof` shape).
+export const SiblingSideSchema = z.enum(['left', 'right']);
+export type SiblingSide = z.infer<typeof SiblingSideSchema>;
+
+export const ProofStepSchema = z.object({
+  sibling: z.string(),
+  side: SiblingSideSchema,
+});
+export type ProofStep = z.infer<typeof ProofStepSchema>;
+
+export const InclusionProofSchema = z.object({
+  leaf: z.string(),
+  steps: z.array(ProofStepSchema),
+  leaf_index: z.number().int().nonnegative(),
+  tree_size: z.number().int().nonnegative(),
+});
+export type InclusionProof = z.infer<typeof InclusionProofSchema>;
+
+export const ProofResponseSchema = z.object({
+  proof: InclusionProofSchema,
+  root: z.string(),
+  computed_at: z.string(),
+});
+export type ProofResponse = z.infer<typeof ProofResponseSchema>;

@@ -117,7 +117,7 @@
           pname = "openclaw-web";
           version = "0.1.0";
           src = pkgs.lib.cleanSource ./.;
-          npmDepsHash = "sha256-6pYtu8pBjMHiweCFPTnlGdJawWroqUlkoddDyU5+uO4=";
+          npmDepsHash = "sha256-wt+0UXUTYU4MVnN1/XBmuRIC1ilEktrBQs6TmuY6uNc=";
           npmFlags = [ "--legacy-peer-deps" ];
           dontNpmPrune = true;
           installPhase = ''

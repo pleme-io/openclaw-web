@@ -1,3 +1,5 @@
+import { useArtifacts } from '@/entities/artifact';
+import { ProofChip } from '@/widgets/ProofChip';
 import {
   Alert,
   Box,
@@ -13,8 +15,6 @@ import {
   Typography,
 } from '@mui/material';
 import { useNavigate } from '@tanstack/react-router';
-import { useArtifacts } from '@/entities/artifact';
-import { ProofChip } from '@/widgets/ProofChip';
 
 const KIND_COLOR: Record<string, 'primary' | 'secondary' | 'warning' | 'default'> = {
   'oci-image': 'primary',
@@ -34,14 +34,13 @@ export function Artifacts() {
           Admitted artifacts
         </Typography>
         <Typography color="text.secondary">
-          Each row is a row in cartorio's merkle tree. Click an entry to see the
-          full receipt.
+          Each row is a row in cartorio's merkle tree. Click an entry to see the full receipt.
         </Typography>
       </Box>
 
       {error ? <Alert severity="error">{(error as Error).message}</Alert> : null}
 
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer component={Paper} variant="outlined" data-tour="artifacts-table">
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -77,11 +76,7 @@ export function Artifacts() {
                   sx={{ cursor: 'pointer' }}
                 >
                   <TableCell>
-                    <Chip
-                      size="small"
-                      label={a.kind}
-                      color={KIND_COLOR[a.kind] ?? 'default'}
-                    />
+                    <Chip size="small" label={a.kind} color={KIND_COLOR[a.kind] ?? 'default'} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontFamily="monospace">

@@ -1,6 +1,6 @@
+import { Providers } from '@/app/Providers';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Providers } from '@/app/Providers';
 
 const root = document.getElementById('root');
 if (!root) {

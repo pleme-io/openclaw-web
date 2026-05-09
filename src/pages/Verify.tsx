@@ -1,4 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useArtifactByDigest, useArtifactProof, useMerkleRoot } from '@/entities/artifact';
+import { verifyInclusionProof } from '@/shared/crypto/blake3-merkle';
+import { ProofChip } from '@/widgets/ProofChip';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import VerifiedIcon from '@mui/icons-material/Verified';
 import {
   Alert,
   Box,
@@ -6,14 +12,11 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
   Stack,
   Typography,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { useArtifactByDigest } from '@/entities/artifact';
-import { ProofChip } from '@/widgets/ProofChip';
+import { useCallback, useState } from 'react';
 
 export function Verify() {
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
@@ -48,22 +51,35 @@ export function Verify() {
   const found = !!hit;
   const notFound = !!error;
 
+  // Stage 2 — once we have a hit, fetch the inclusion proof + the
+  // current merkle root and verify locally in the browser. This is what
+  // "constructive proof" means in practice: we don't trust cartorio's
+  // claim that the artifact is in the ledger; we recompute the BLAKE3
+  // path-up ourselves and compare.
+  const { data: proof, isLoading: loadingProof } = useArtifactProof(hit?.id);
+  const { data: root } = useMerkleRoot();
+
+  const localVerify = proof ? verifyInclusionProof(proof.proof, proof.root) : null;
+  const rootDrift = !!proof && !!root && proof.root !== root.state_root;
+
   return (
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" gutterBottom>
           Verify
         </Typography>
-        <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
-          Drag a manifest file in. Your browser computes <code>sha256(bytes)</code>{' '}
-          locally — no upload — and looks the digest up in cartorio. If the
-          digest is in the ledger, you see the receipt; otherwise cartorio
-          returns 404 and we show the mismatch.
+        <Typography color="text.secondary" sx={{ maxWidth: 760 }}>
+          Drag a manifest in. Your browser computes <code>sha256(bytes)</code> locally — no upload —
+          looks up the digest in cartorio, fetches the merkle inclusion proof, and{' '}
+          <strong>verifies the proof in your browser</strong> with BLAKE3. The last step is the
+          &ldquo;constructive&rdquo; part: we don&apos;t trust cartorio&apos;s claim &mdash; we
+          recompute the path-up and compare to the pinned root ourselves.
         </Typography>
       </Box>
 
       <Card
         variant="outlined"
+        data-tour="verify-drop"
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}
         sx={{
@@ -118,7 +134,7 @@ export function Verify() {
                 <Stack spacing={1}>
                   <Chip
                     icon={<CheckCircleIcon />}
-                    label="match — admitted in cartorio"
+                    label="step 1 ✓ digest in cartorio's ledger"
                     color="success"
                     sx={{ alignSelf: 'flex-start' }}
                   />
@@ -149,6 +165,72 @@ export function Verify() {
                   sx={{ alignSelf: 'flex-start' }}
                 />
               ) : null}
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {found ? (
+        <Card variant="outlined">
+          <CardContent>
+            <Stack spacing={1.5}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <VerifiedIcon color="primary" />
+                <Typography variant="h6">
+                  Step 2 — inclusion proof, verified in your browser
+                </Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                Your browser fetches the artifact&apos;s inclusion proof, walks the BLAKE3 path-up
+                locally, and compares to cartorio&apos;s current state-root. If anyone tampered with
+                the leaf, the proof, or the registry, the verdict here is &ldquo;does not
+                verify.&rdquo;
+              </Typography>
+              <Divider sx={{ my: 1 }} />
+              {loadingProof || !proof ? (
+                <Chip label="fetching proof…" />
+              ) : !localVerify ? null : (
+                <Stack spacing={1}>
+                  <Chip
+                    icon={localVerify.ok ? <CheckCircleIcon /> : <ErrorIcon />}
+                    label={
+                      localVerify.ok
+                        ? `step 2 ✓ proof verified locally in ${localVerify.durationMicros} µs`
+                        : 'step 2 ✗ proof did not verify — registry tampered or proof stale'
+                    }
+                    color={localVerify.ok ? 'success' : 'error'}
+                    sx={{ alignSelf: 'flex-start' }}
+                  />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography>steps walked</Typography>
+                    <Typography fontFamily="monospace">{localVerify.steps}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography>tree size</Typography>
+                    <Typography fontFamily="monospace">{proof.proof.tree_size}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography>computed root</Typography>
+                    <ProofChip value={localVerify.computedRoot} />
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography>expected (proof) root</Typography>
+                    <ProofChip value={localVerify.expectedRoot} />
+                  </Stack>
+                  {root ? (
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography>current state_root</Typography>
+                      <ProofChip value={root.state_root} />
+                    </Stack>
+                  ) : null}
+                  {rootDrift ? (
+                    <Alert severity="warning">
+                      The registry&apos;s current state_root has advanced past the root this proof
+                      verifies against. Re-pin and refetch if you need a current proof.
+                    </Alert>
+                  ) : null}
+                </Stack>
+              )}
             </Stack>
           </CardContent>
         </Card>

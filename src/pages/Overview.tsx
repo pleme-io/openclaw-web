@@ -1,7 +1,7 @@
-import { Alert, Box, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
-import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import { useAuditConsistency, useMerkleRoot } from '@/entities/artifact';
 import { ProofChip } from '@/widgets/ProofChip';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import { Alert, Box, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
 
 export function Overview() {
   const { data: root, isLoading: rootLoading, error: rootErr } = useMerkleRoot();
@@ -15,9 +15,9 @@ export function Overview() {
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
           Every artifact in this ledger has a transferable receipt: a{' '}
-          <strong>(digest, profile, result_hash)</strong> triple anyone can
-          re-derive from the public manifest bytes plus the public{' '}
-          <code>provas</code> pack source. Cartorio is the source of truth.
+          <strong>(digest, profile, result_hash)</strong> triple anyone can re-derive from the
+          public manifest bytes plus the public <code>provas</code> pack source. Cartorio is the
+          source of truth.
         </Typography>
       </Box>
 
@@ -27,7 +27,7 @@ export function Overview() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
+          <Card variant="outlined" data-tour="ledger-root">
             <CardContent>
               <Typography variant="overline" color="text.secondary">
                 Merkle ledger
@@ -66,7 +66,7 @@ export function Overview() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
+          <Card variant="outlined" data-tour="audit">
             <CardContent>
               <Typography variant="overline" color="text.secondary">
                 Audit consistency
@@ -80,9 +80,8 @@ export function Overview() {
                     sx={{ alignSelf: 'flex-start' }}
                   />
                   <Typography variant="body2">
-                    Re-folded {audit.events_replayed} events; checked{' '}
-                    {audit.artifacts_checked} artifacts; {audit.divergences.length}{' '}
-                    divergences.
+                    Re-folded {audit.events_replayed} events; checked {audit.artifacts_checked}{' '}
+                    artifacts; {audit.divergences.length} divergences.
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     last check {new Date(audit.checked_at).toLocaleString()}

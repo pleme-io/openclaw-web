@@ -1,15 +1,6 @@
-import {
-  Alert,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
 import { useArtifact } from '@/entities/artifact';
 import { ProofChip } from '@/widgets/ProofChip';
+import { Alert, Box, Card, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
 
 export interface ArtifactDetailProps {
   id: string;
@@ -101,10 +92,9 @@ export function ArtifactDetail({ id }: ArtifactDetailProps) {
               </Stack>
               <Divider />
               <Typography variant="caption" color="text.secondary">
-                Anyone with the public manifest bytes + the public{' '}
-                <code>provas</code> pack code can re-derive <code>result_hash</code>{' '}
-                and confirm it matches what cartorio holds. That's the
-                transferable receipt.
+                Anyone with the public manifest bytes + the public <code>provas</code> pack code can
+                re-derive <code>result_hash</code> and confirm it matches what cartorio holds.
+                That's the transferable receipt.
               </Typography>
             </Stack>
           </CardContent>

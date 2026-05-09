@@ -1,6 +1,6 @@
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { useMemo } from 'react';
 import { routeTree } from '../routeTree.gen';
 

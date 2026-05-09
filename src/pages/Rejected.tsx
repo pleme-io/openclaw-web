@@ -1,3 +1,4 @@
+import { useArtifacts, useRejections } from '@/entities/artifact';
 import {
   Alert,
   Box,
@@ -12,7 +13,6 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { useArtifacts, useRejections } from '@/entities/artifact';
 
 const KIND_COLOR: Record<string, 'primary' | 'secondary' | 'warning' | 'default'> = {
   'oci-image': 'primary',
@@ -68,9 +68,8 @@ export function Rejected() {
           Rejected admissions
         </Typography>
         <Typography color="text.secondary">
-          Cartorio refused these admit requests at the gate. The merkle ledger
-          remains untouched — tamper attempts are visible but never recorded as
-          admissions.
+          Cartorio refused these admit requests at the gate. The merkle ledger remains untouched —
+          tamper attempts are visible but never recorded as admissions.
         </Typography>
       </Box>
 
@@ -107,11 +106,11 @@ export function Rejected() {
         <Alert severity="info">loading…</Alert>
       ) : rejectedCount === 0 ? (
         <Alert severity="success">
-          No rejected admissions in the log. The cartorio admission gate hasn't
-          turned away any attempts since the last restart.
+          No rejected admissions in the log. The cartorio admission gate hasn't turned away any
+          attempts since the last restart.
         </Alert>
       ) : (
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" data-tour="rejected-table">
           <Table size="small">
             <TableHead>
               <TableRow>

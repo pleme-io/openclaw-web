@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Box, Chip, Tooltip } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { Box, Chip, Tooltip } from '@mui/material';
+import { useState } from 'react';
 
 export interface ProofChipProps {
   value: string;

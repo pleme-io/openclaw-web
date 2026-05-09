@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router';
 import { ArtifactDetail } from '@/pages/ArtifactDetail';
+import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/artifacts/$id')({
   component: () => {

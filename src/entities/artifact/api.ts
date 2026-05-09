@@ -1,3 +1,4 @@
+import { cartorio } from '@/shared/api/cartorio';
 /**
  * TanStack Query hooks over cartorio's REST surface.
  *
@@ -5,13 +6,13 @@
  * never returns rapidly-changing data so the network cost is fine.
  */
 import { useQuery } from '@tanstack/react-query';
-import { cartorio } from '@/shared/api/cartorio';
 
 export const queryKeys = {
   merkleRoot: ['cartorio', 'merkle', 'root'] as const,
   artifacts: ['cartorio', 'artifacts'] as const,
   artifact: (id: string) => ['cartorio', 'artifact', id] as const,
   artifactByDigest: (digest: string) => ['cartorio', 'artifact-by-digest', digest] as const,
+  artifactProof: (id: string) => ['cartorio', 'artifact-proof', id] as const,
   auditConsistency: ['cartorio', 'audit-consistency'] as const,
   rejections: ['cartorio', 'rejections'] as const,
 };
@@ -43,6 +44,14 @@ export const useArtifactByDigest = (digest: string | undefined) =>
     // cartorio returns 404 if not present; React Query reports as error.
     queryFn: () => cartorio.artifactByDigest(digest as string),
     enabled: !!digest,
+    retry: false,
+  });
+
+export const useArtifactProof = (id: string | undefined) =>
+  useQuery({
+    queryKey: queryKeys.artifactProof(id ?? ''),
+    queryFn: () => cartorio.artifactProof(id as string),
+    enabled: !!id,
     retry: false,
   });
 
