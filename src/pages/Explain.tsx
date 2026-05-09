@@ -893,7 +893,7 @@ export function Explain() {
               <Chip label="✓ admitted" size="small" color="success" />
               <Box>
                 <Typography fontWeight={600}>
-                  pleme-io rewrap variant — passes all 13 tests, real pack_hash baked in
+                  pleme-io openclaw rewrap variant — passes all 13 image-pack tests
                 </Typography>
                 <Typography
                   variant="body2"
@@ -905,9 +905,9 @@ export function Explain() {
                   result_hash 553e63bc3904bdb5903985d3add076aee1e314c06a5c3e3783bee771e592483e
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Same upstream layers, repackaged with the five required annotations. The pack ran
-                  green; tabeliao admitted; cartorio&apos;s ledger root advanced. Visible right now
-                  on the{' '}
+                  Same upstream layers, repackaged with the five required annotations. Pack{' '}
+                  <code>fedramp-high-openclaw-image@2</code> ran green; tabeliao admitted;
+                  cartorio&apos;s ledger root advanced. Visible on the{' '}
                   <Button component={Link} to="/artifacts" size="small">
                     Artifacts
                   </Button>{' '}
@@ -915,13 +915,91 @@ export function Explain() {
                 </Typography>
               </Box>
             </Stack>
+
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Chip label="✓ admitted (chart)" size="small" color="success" />
+              <Box>
+                <Typography fontWeight={600}>
+                  pleme-io <code>lareira-openclaw-agent</code> chart — passes all 16 helm-content
+                  tests
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.8rem', my: 0.5 }}
+                >
+                  digest sha256:5eddcd2ef7c61d78b5efd77bff22f67e5e0bc4980134d9e8f5a407fa5b4e7177
+                  <br />
+                  result_hash fee9a62970b4e911280ce34736d405d6f70b8e332110324105f7a6713ca3de9b
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Real chart wrapping the openclaw image with the FedRAMP- High overlay
+                  (runAsNonRoot, default-deny NetworkPolicy, PDB, resource limits, ingress TLS, ≥2
+                  replicas, etc.). Pack <code>fedramp-high-openclaw-helm-content@1</code> ran green
+                  against the actual <code>Chart.yaml</code> + <code>values.yaml</code>; cartorio
+                  admitted. Visible on the{' '}
+                  <Button component={Link} to="/artifacts" size="small">
+                    Artifacts
+                  </Button>{' '}
+                  tab as <code>lareira-openclaw-agent@0.1.0</code>.
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Chip label="🦞 running" size="small" color="primary" />
+              <Box>
+                <Typography fontWeight={600}>
+                  Live openclaw agent — deployed to this cluster from the admitted chart, public at{' '}
+                  <a
+                    href="https://openclaw-agent-dev.quero.cloud/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    openclaw-agent-dev.quero.cloud
+                  </a>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  FluxCD <code>HelmRelease</code> <code>openclaw/openclaw-agent</code> reconciled
+                  this cluster from{' '}
+                  <code>oci://ghcr.io/pleme-io/charts/lareira-openclaw-agent:0.1.1</code>. The pod
+                  is running the actual upstream openclaw gateway (
+                  <code>node openclaw.mjs gateway --allow-unconfigured</code>) in{' '}
+                  <code>--auth=none</code> demo mode — no LLM provider key wired, but the gateway
+                  accepts traffic and responds to <code>/health</code> with{' '}
+                  <code>{'{"ok":true,"status":"live"}'}</code>. The whole chain is real: chart
+                  admitted to cartorio, image admitted to cartorio, FedRAMP-High overlay enforced by
+                  the chart templates, openclaw running.
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    href="https://openclaw-agent-dev.quero.cloud/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Visit the live openclaw
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://openclaw-agent-dev.quero.cloud/health"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    /health
+                  </Button>
+                </Stack>
+              </Box>
+            </Stack>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2.5 }}>
-            Both records are reproducible. Anyone with the upstream digest, the public provas pack
-            source, and tabeliao can re-run the same audit and land on the same{' '}
+            All four records are reproducible. Anyone with the upstream digest, the public provas
+            pack source, and tabeliao can re-run the same audit and land on the same{' '}
             <code>result_hash</code>. The proof is constructive, the failures are nameable, the gate
-            is real.
+            is real, and an actual openclaw is running here under those gates right now.
           </Typography>
         </Paper>
       </Section>
@@ -1522,7 +1600,27 @@ async fn check_artifact_admitted(
         </Typography>
         <Stack spacing={1.5}>
           <Stack direction="row" spacing={2} alignItems="flex-start">
-            <Chip label="The artifact" size="small" color="primary" />
+            <Chip label="🦞 live here" size="small" color="success" />
+            <Box>
+              <Typography fontWeight={600}>
+                <a href="https://openclaw-agent-dev.quero.cloud/" target="_blank" rel="noreferrer">
+                  openclaw-agent-dev.quero.cloud
+                </a>{' '}
+                — the actual openclaw agent running in this cluster
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Deployed via FluxCD from a chart cartorio admitted at <code>sha256:5eddcd2…</code>{' '}
+                with the real <code>fedramp-high-openclaw-helm-content@1</code> pack_hash baked in.
+                The image cartorio admitted is the rewrap variant at <code>sha256:f405deaf…</code>.
+                The pod is the actual openclaw gateway, in{' '}
+                <code>--auth=none --allow-unconfigured</code>
+                demo mode (no LLM key wired). Click and you&apos;re hitting the real bytes the proof
+                chain protects.
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Chip label="The upstream artifact" size="small" color="primary" />
             <Box>
               <Typography fontWeight={600}>
                 <a href="https://github.com/openclaw/openclaw" target="_blank" rel="noreferrer">

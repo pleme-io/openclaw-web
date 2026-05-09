@@ -19,7 +19,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { EVENTS, type EventData, Joyride, STATUS, type Step } from 'react-joyride';
 
-const STORAGE_KEY = 'openclaw-tour-seen-v6';
+const STORAGE_KEY = 'openclaw-tour-seen-v7';
 const START_EVENT = 'openclaw:start-tour';
 
 // Step shape with route metadata. react-joyride forwards `data` through
@@ -191,16 +191,17 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="next-stop"]',
-    title: 'See the real openclaw',
+    title: 'Visit the actual openclaw running here',
     content: (
       <>
-        The openclaw agent in this demo is a real, widely-deployed open-source AI assistant —{' '}
-        <a href="https://github.com/openclaw/openclaw" target="_blank" rel="noreferrer">
-          github.com/openclaw/openclaw
-        </a>
-        . The pleme-io repos that secure it are linked here too: openclaw-scanner,
-        openclaw-publisher-pki, tameshi-openclaw, plus the four-repo chain itself (cartorio, provas,
-        tabeliao, lacre). Replay anytime via <strong>Take tour</strong> in the top nav.
+        The first link below —{' '}
+        <a href="https://openclaw-agent-dev.quero.cloud/" target="_blank" rel="noreferrer">
+          openclaw-agent-dev.quero.cloud
+        </a>{' '}
+        — is the actual openclaw gateway running in this cluster. Deployed via FluxCD from a chart
+        admitted to cartorio with a real FedRAMP-High pack_hash; image admitted with its own
+        pack_hash; proof chain enforced end to end. Below it, the open-source repos the demo
+        composes. Replay anytime via <strong>Take tour</strong> in the top nav.
       </>
     ),
     data: { route: '/explain' },
