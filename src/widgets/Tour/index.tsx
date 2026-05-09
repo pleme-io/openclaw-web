@@ -19,7 +19,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { EVENTS, type EventData, Joyride, STATUS, type Step } from 'react-joyride';
 
-const STORAGE_KEY = 'openclaw-tour-seen-v5';
+const STORAGE_KEY = 'openclaw-tour-seen-v6';
 const START_EVENT = 'openclaw:start-tour';
 
 // Step shape with route metadata. react-joyride forwards `data` through
@@ -287,23 +287,68 @@ export function Tour() {
         primaryColor: '#1976d2',
         zIndex: 10000,
         showProgress: true,
+        // Skip the beacon globally — go straight from step to step with
+        // the tooltip + spotlight. The little click-me dot is too subtle
+        // for the demo audience; explicit boxes end-to-end is the ask.
+        skipBeacon: true,
+        // Roomier spotlight cutout so the highlighted element is hard to
+        // miss against the dimmed page.
+        spotlightPadding: 16,
+        spotlightRadius: 8,
+        // Darker overlay = more dramatic dim of the rest of the page,
+        // so the eye lands on the tooltip + spotlight reflexively.
+        overlayColor: 'rgba(0, 0, 0, 0.65)',
+        // Wider tooltip so multi-line content doesn't wrap mid-phrase.
+        width: 440,
         // Default is ['back', 'close', 'primary']. We want skip + back
         // + primary (no close button — skip ends the tour outright).
         buttons: ['skip', 'back', 'primary'],
         // Permanent end-of-tour state lives in localStorage; pressing
         // skip ends the tour rather than just closing the current step.
         closeButtonAction: 'skip',
+        // Stop accidental overlay clicks from dismissing the tour —
+        // demo viewers click around to explore; they shouldn't lose
+        // their place by clicking off the spotlight.
+        overlayClickAction: false,
       }}
       styles={{
         tooltip: {
-          fontSize: 14,
-          borderRadius: 8,
+          fontSize: 15,
+          borderRadius: 12,
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35)',
+          padding: 20,
         },
         tooltipTitle: {
-          fontSize: 18,
-          fontWeight: 600,
+          fontSize: 19,
+          fontWeight: 700,
+          marginBottom: 8,
         },
-        buttonPrimary: { borderRadius: 6 },
+        tooltipContent: {
+          padding: '8px 0 0',
+          lineHeight: 1.55,
+        },
+        buttonPrimary: {
+          borderRadius: 8,
+          fontSize: 15,
+          fontWeight: 600,
+          padding: '10px 20px',
+        },
+        buttonBack: {
+          fontSize: 14,
+          marginRight: 8,
+        },
+        buttonSkip: {
+          fontSize: 13,
+          color: 'rgba(0, 0, 0, 0.55)',
+        },
+        spotlight: {
+          // Bright cyan ring around the highlighted element so it pops
+          // against the dimmed overlay.
+          // @ts-expect-error -- joyride's Styles types spotlight as
+          //   SVGAttributes<SVGPathElement>; CSS box-shadow on the SVG
+          //   path renders as the spotlight's outline in practice.
+          boxShadow: '0 0 0 4px rgba(33, 150, 243, 0.85), 0 0 32px rgba(33, 150, 243, 0.4)',
+        },
       }}
       locale={{
         back: 'Back',
