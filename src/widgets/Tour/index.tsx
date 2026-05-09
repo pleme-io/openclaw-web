@@ -19,7 +19,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { EVENTS, type EventData, Joyride, STATUS, type Step } from 'react-joyride';
 
-const STORAGE_KEY = 'openclaw-tour-seen-v1';
+const STORAGE_KEY = 'openclaw-tour-seen-v3';
 const START_EVENT = 'openclaw:start-tour';
 
 // Step shape with route metadata. react-joyride forwards `data` through
@@ -31,12 +31,16 @@ const STEPS: TourStep[] = [
   {
     target: 'body',
     placement: 'center',
-    title: 'Welcome to openclaw',
+    title: 'Welcome — what you’re looking at',
     content: (
       <>
-        This 90-second tour walks you through cartorio&apos;s constructive proof chain — what the
-        receipt is, how it&apos;s verified, and what tamper rejection looks like. Use{' '}
-        <strong>Next</strong>, <strong>Back</strong>, or <strong>Skip</strong> at any time.
+        Imagine the regulator calling: &ldquo;You had an incident. In 72 hours, tell me which
+        version of which software was running and whether you&apos;d verified it was safe.&rdquo;
+        Most companies scramble. This 90-second tour shows a system that answers those questions
+        instantly, with cryptographic proof anyone can re-check themselves. The{' '}
+        <strong>openclaw</strong> agent shown throughout is the demonstration artifact — the system
+        being shown off is the proof chain that protects it. Use <strong>Next</strong>,{' '}
+        <strong>Back</strong>, or <strong>Skip</strong> at any time.
       </>
     ),
     skipBeacon: true,
@@ -44,12 +48,12 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="ledger-root"]',
-    title: 'The ledger root',
+    title: 'The ledger root — your audit pin',
     content: (
       <>
         Cartorio runs two merkle trees (state + event) that fold into one 32-byte{' '}
-        <code>ledger_root</code>. Anyone can pin this hash and verify offline against it — no trust
-        in the registry required.
+        <code>ledger_root</code>. An auditor pins this 32 bytes once and uses it to verify any past
+        compliance claim offline — no trust in the registry, no SIEM trawl, microsecond response.
       </>
     ),
     data: { route: '/' },
@@ -98,13 +102,14 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="verify-drop"]',
-    title: 'Verify in your browser',
+    title: 'Verify, in your browser',
     content: (
       <>
-        Drop any file here. Your browser computes <code>sha256(bytes)</code> — no upload — looks the
-        digest up in cartorio, fetches the merkle inclusion proof, and verifies the BLAKE3 path-up{' '}
-        <em>locally</em>. If anyone tampered with anything, the verdict here flips to &ldquo;does
-        not verify.&rdquo;
+        The page picks an admitted artifact and runs the full verification cycle automatically — no
+        upload, no clicks. Step 1 confirms the digest is in cartorio&apos;s ledger; step 2 fetches
+        the inclusion proof and walks the BLAKE3 path-up <em>locally in your browser</em> in
+        microseconds. If anyone tampered with the artifact, the proof, or the registry, step 2 flips
+        to &ldquo;does not verify.&rdquo;
       </>
     ),
     data: { route: '/verify' },
@@ -134,14 +139,29 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="nav-explain"]',
-    title: 'Want the full philosophy?',
+    title: 'Want the full picture?',
     content: (
       <>
-        The Explain tab has 8 sections, each with an ELI5 lead and a &ldquo;dive deeper&rdquo;
-        accordion. Diagrams, visuals, and code.
+        The Explain tab walks through the whole story in plain language first (the problem, the
+        solution, why we picked these data structures), then maps it onto <strong>CIRCIA</strong>,
+        then dives into the technical detail with diagrams and code. 12 sections total, ELI5 lead,
+        &ldquo;dive deeper&rdquo; accordions for the math.
       </>
     ),
     data: { route: '/rejected' },
+  },
+  {
+    target: '[data-tour="value-prop"]',
+    title: 'The regulatory pull',
+    content: (
+      <>
+        This is why the system exists. CISA&apos;s CIRCIA final rule is expected May 2026 and will
+        require covered entities to file incident reports within 72 hours, including specific data
+        elements about the artifacts that were running and their compliance posture. Cartorio gives
+        that evidence cryptographically, in microseconds.
+      </>
+    ),
+    data: { route: '/explain' },
   },
   {
     target: '[data-tour="explain-toc"]',

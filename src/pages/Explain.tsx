@@ -282,14 +282,18 @@ function DualTreeSvg() {
 }
 
 const TOC: Array<{ n: number; title: string }> = [
-  { n: 1, title: 'The receipt' },
-  { n: 2, title: 'What a merkle tree is' },
-  { n: 3, title: 'Cartorio’s dual-tree shape' },
-  { n: 4, title: 'Modifier matrix' },
-  { n: 5, title: 'Flow A — admit' },
-  { n: 6, title: 'Flow B — verify offline' },
-  { n: 7, title: 'Flow C — tamper rejection' },
-  { n: 8, title: 'The four-repo chain' },
+  { n: 1, title: 'The problem (plain language)' },
+  { n: 2, title: 'The solution (plain language)' },
+  { n: 3, title: 'Why these data structures' },
+  { n: 4, title: 'CIRCIA — the regulatory frame' },
+  { n: 5, title: 'The receipt' },
+  { n: 6, title: 'What a merkle tree is' },
+  { n: 7, title: 'Cartorio’s dual-tree shape' },
+  { n: 8, title: 'Modifier matrix' },
+  { n: 9, title: 'Flow A — admit' },
+  { n: 10, title: 'Flow B — verify offline' },
+  { n: 11, title: 'Flow C — tamper rejection' },
+  { n: 12, title: 'The four-repo chain' },
 ];
 
 const MODIFIERS: Array<{
@@ -355,6 +359,46 @@ const TAMPER_VECTORS: Array<{ vector: string; caught_by: string }> = [
   },
 ];
 
+// CIRCIA — Cyber Incident Reporting for Critical Infrastructure Act of
+// 2022. NPRM published April 2024; CISA's final rule expected May 2026.
+// Each row maps a concrete CIRCIA-required incident-report data element
+// (per the NPRM) to the cartorio capability that delivers it. This is
+// the table that earns the "constructive compliance" claim — each cell
+// names a regulator-facing artifact cartorio produces today, not a
+// roadmap promise.
+const CIRCIA_MAP: Array<{
+  requirement: string;
+  cartorio_capability: string;
+}> = [
+  {
+    requirement:
+      'Vulnerabilities exploited (which version of which artifact was running at the time of the incident)',
+    cartorio_capability:
+      'Per-artifact `digest` + `last_modified_at` + the full event chain in the merkle ledger answer "what was deployed and since when" with cryptographic proof.',
+  },
+  {
+    requirement:
+      'Security protocols in place at the time of the incident (proof of compliance posture)',
+    cartorio_capability:
+      '`compliance.profile` + `result_hash` per artifact, plus reattest events with timestamps, give a continuous chain of "this pack was passing for this artifact at each moment."',
+  },
+  {
+    requirement: 'Supply-chain compromise — proof of which third-party components were running',
+    cartorio_capability:
+      'Bundle artifacts compose member pack_hashes into evidence; bundle proof inherits from member proofs, so member-level provenance is reconstructible at any past root.',
+  },
+  {
+    requirement: '2-year retention of the underlying data — IOCs, log entries, vulnerability info',
+    cartorio_capability:
+      'Cartorio is append-only by construction. Sqlite/Postgres backends are durable; merkle root can be pinned externally for tamper-proof retention longer than any database TTL.',
+  },
+  {
+    requirement: '72-hour reporting window — assemble the report fast',
+    cartorio_capability:
+      '"When was artifact X last verified compliant?" answers in O(log N) via inclusion proof — sub-millisecond at fleet scale, no SIEM trawl required.',
+  },
+];
+
 const GLOSSARY: Array<{ term: string; def: string }> = [
   {
     term: 'BLAKE3',
@@ -403,15 +447,236 @@ export function Explain() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" gutterBottom>
-          How the proof chain works
+          How this works — start here
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 760 }}>
-          A guided tour through cartorio&apos;s merkle ledger — what the receipt looks like, why
-          it&apos;s transferable, and how every flow that touches it stays tamper-evident. Each
-          section opens with an <strong>ELI5</strong> framing; click <em>dive deeper</em> wherever
-          you want the technical detail.
+          The first three sections explain the problem, the solution, and the ideas behind them in
+          plain language — no jargon. The technical terms only show up later, once you have the
+          picture. Each section opens with an <strong>ELI5</strong> framing; click{' '}
+          <em>dive deeper</em> wherever you want the detail.
         </Typography>
       </Box>
+
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 3,
+          borderLeftWidth: 4,
+          borderLeftColor: 'primary.main',
+          bgcolor: 'primary.50',
+        }}
+        data-tour="value-prop"
+      >
+        <Typography variant="overline" color="primary.dark" sx={{ fontWeight: 700 }}>
+          The short version
+        </Typography>
+        <Typography variant="h5" sx={{ mt: 1, mb: 2, fontWeight: 600 }}>
+          An always-honest notebook of every compliance check, that nobody (not even us) can quietly
+          edit.
+        </Typography>
+        <Typography sx={{ mb: 2 }}>
+          When something on your network gets compromised, regulators are going to ask in a hurry:
+          which version of which software was running, when was it last verified safe, and where did
+          its parts come from? Most companies can&apos;t answer that quickly, and what they do
+          answer is hard to trust. We built a notebook that records every compliance check in a way
+          where any tampering instantly changes a single 32-byte fingerprint that you (or an
+          auditor) can pin and re-check anytime.
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          The <strong>system</strong> shown here is the notebook keeper and its supporting tools
+          (cartorio + provas + tabeliao + lacre). The <strong>artifact</strong> being proven
+          compliant — the openclaw agent image and its helm-expressed architecture — is the
+          demonstration target, not the system itself. The same proof chain works for any artifact
+          identified by its bytes.
+        </Typography>
+      </Paper>
+
+      <Section n={1} icon={<GavelIcon color="primary" />} title="The problem (plain language)">
+        <ELI5>
+          Imagine your company runs important software. One day, attackers break in through it. The
+          regulator calls and says: &ldquo;Tell me which version of which software was on your
+          machines, when you last verified it was safe, and where every piece of code came from. You
+          have 72 hours.&rdquo; Most companies cannot answer those questions quickly. The few that
+          can, can&apos;t prove their answers weren&apos;t edited after the fact.
+        </ELI5>
+        <P>Three concrete things go wrong when an incident happens:</P>
+        <Typography component="ul" sx={{ mb: 2, pl: 3 }}>
+          <li>
+            <strong>The clock starts immediately.</strong> Reporting windows are now measured in
+            hours, not days. Trawling CI logs and SBOM exports is too slow.
+          </li>
+          <li>
+            <strong>The evidence is scattered.</strong> Image registry over here, scanner reports
+            over there, deployment manifests in git, compliance reports in a wiki. Reconstructing
+            &ldquo;what was running on this machine yesterday&rdquo; takes engineering hours or
+            days.
+          </li>
+          <li>
+            <strong>The evidence is editable.</strong> Anyone with database access could in
+            principle have changed the records after the fact. The regulator can&apos;t fully trust
+            your answers, which means more questions, more evidence requests, more time.
+          </li>
+        </Typography>
+        <P>
+          The honest version of the problem: you need a record that is
+          <em> fast to query</em>, <em>complete</em>, and <em>impossible to retroactively edit</em>{' '}
+          — even by you. None of the off-the-shelf pieces (registry, scanner, CI) deliver all three.
+        </P>
+      </Section>
+
+      <Section n={2} icon={<HubIcon color="primary" />} title="The solution (plain language)">
+        <ELI5>
+          We built a notebook with a magic property: every page has a fingerprint, and the front
+          cover has the fingerprint of all the pages combined. If anyone tries to change so much as
+          a comma on any page, the cover&apos;s fingerprint changes too. So we (and anyone we send
+          the cover fingerprint to) can spot tampering instantly, without flipping through the
+          notebook.
+        </ELI5>
+        <P>
+          Whenever a piece of software is approved as compliant, we add an entry. Whenever something
+          changes (it&apos;s revoked, re-checked, or replaced), we add another entry. Entries are{' '}
+          <strong>never deleted</strong> and <strong>never edited</strong>.
+        </P>
+        <P>Three things follow from this design:</P>
+        <Typography component="ul" sx={{ mb: 2, pl: 3 }}>
+          <li>
+            <strong>
+              You can ask &ldquo;was X compliant on day D?&rdquo; and get a confident answer.
+            </strong>{' '}
+            The notebook tells you what was true at any past moment, because nothing has been
+            overwritten.
+          </li>
+          <li>
+            <strong>Anyone can verify the answer.</strong> An auditor pins the cover fingerprint,
+            asks for proof a particular entry exists, and checks it themselves. The math says
+            &ldquo;yes&rdquo; or &ldquo;no&rdquo; — they don&apos;t have to trust us.
+          </li>
+          <li>
+            <strong>Tampering is instantly visible.</strong> Even if someone with full database
+            access edits a record, the cover fingerprint shifts. We notice within minutes.
+          </li>
+        </Typography>
+        <P>
+          When the regulator calls, you point at the notebook and say: &ldquo;Here&apos;s the entry
+          for the software that was running. Here&apos;s the cryptographic proof it&apos;s
+          authentic. Here&apos;s the timestamp it was last verified. Here&apos;s the test result
+          showing it passed our compliance pack.&rdquo; They verify all of it themselves in
+          microseconds.
+        </P>
+      </Section>
+
+      <Section n={3} icon={<AccountTreeIcon color="primary" />} title="Why these data structures">
+        <ELI5>
+          The &ldquo;notebook with the magic fingerprint&rdquo; isn&apos;t a metaphor — there&apos;s
+          a specific, well-understood math trick behind it. This section explains in plain language
+          why we picked each piece of math, before we name it.
+        </ELI5>
+        <P>
+          <strong>Why a fingerprint that changes when anything changes?</strong> Because you need to
+          detect tampering without reading the whole notebook. The trick: every entry has a small
+          fingerprint; pairs of fingerprints get combined into a parent fingerprint; pairs of
+          parents combine again; all the way up to one root fingerprint. Change any single bit
+          anywhere, and the root changes. (The technical name for this is a <em>merkle tree</em>.)
+        </P>
+        <P>
+          <strong>Why proofs that don&apos;t require sending the whole notebook?</strong> Because an
+          auditor verifying &ldquo;X is in the ledger&rdquo; should not have to download a million
+          entries. The trick: you can prove a single entry is in the tree by sending just a handful
+          of fingerprints (about 20 for a million entries). The auditor combines them step by step
+          and lands on the root they already pinned. (Technical name: <em>inclusion proof</em>.)
+        </P>
+        <P>
+          <strong>
+            Why a name that <em>is</em> the contents?
+          </strong>{' '}
+          Because if the name of a piece of software is just a label (&ldquo;openclaw
+          v1.2.3&rdquo;), someone could swap the bytes underneath the label. But if the name is a
+          fingerprint of the actual bytes, swapping the bytes changes the name — there&apos;s no way
+          to lie. (Technical name: <em>content addressing</em> or <em>digest</em>.)
+        </P>
+        <P>
+          <strong>Why two parallel records (state + events)?</strong> Because you have two different
+          audit questions: <em>&ldquo;What is true right now?&rdquo;</em> (current state of every
+          artifact) and <em>&ldquo;What happened to artifact X over time?&rdquo;</em> (full history
+          of admissions, revocations, re-checks). One is a snapshot; the other is a journal. We keep
+          both, and combine their root fingerprints into a single audit pin.
+        </P>
+        <P>
+          <strong>Why an append-only journal?</strong> Because the regulator wants{' '}
+          <strong>2 years</strong> of underlying data preserved. If entries can be edited,
+          &ldquo;preserved&rdquo; means nothing — you need physical impossibility, not a policy. The
+          journal is append-only by construction; combined with the root fingerprint, an editor
+          would have to forge a 32-byte cryptographic value that is mathematically infeasible to
+          forge.
+        </P>
+        <P>
+          The next eight sections walk through each of these pieces in detail, with diagrams, code,
+          and the technical names. If you want the technical names now: merkle tree, BLAKE3,
+          inclusion proof, content-addressed digest, append-only event log, dual-tree shape.
+          They&apos;re all just names for what we just described in plain language.
+        </P>
+      </Section>
+
+      <Section n={4} icon={<GavelIcon color="primary" />} title="CIRCIA — the regulatory frame">
+        <ELI5>
+          Imagine the regulator calling at 3 AM: &ldquo;You had an incident. Tell me, in 72 hours,
+          exactly which version of which thing was running, whether it was passing your compliance
+          checks, and where the supply-chain provenance came from.&rdquo; Today most companies would
+          scramble through CI logs and SBOMs for days. Cartorio answers each question in
+          microseconds — with a receipt the regulator can re-verify themselves.
+        </ELI5>
+        <Typography sx={{ mb: 2 }}>
+          CIRCIA (the Cyber Incident Reporting for Critical Infrastructure Act of 2022) requires
+          covered entities to report covered cyber incidents to CISA within 72 hours, including
+          specific data elements about the affected systems, vulnerabilities, and security posture.
+          The cells below are the load-bearing claim: each row names a CIRCIA-required element and
+          the cartorio primitive that delivers it today, not on a roadmap.
+        </Typography>
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700, width: '40%' }}>
+                  CIRCIA report-data requirement
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Cartorio capability</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {CIRCIA_MAP.map((c) => (
+                <TableRow key={c.requirement}>
+                  <TableCell sx={{ fontSize: '0.85rem' }}>{c.requirement}</TableCell>
+                  <TableCell sx={{ fontSize: '0.85rem' }}>{c.cartorio_capability}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Deeper title="The regulatory anchor (citations)">
+          <P>
+            Reporting requirement and data elements are codified in the CISA Notice of Proposed
+            Rulemaking published in the Federal Register on <strong>April 4, 2024</strong>. The
+            2-year retention rule, the inclusion of supply-chain compromises as covered incidents,
+            and the &ldquo;security protocols in place&rdquo; data element are all in the NPRM text.
+            Final rule expected <strong>May 2026</strong>. Live status:{' '}
+            <a
+              href="https://www.cisa.gov/topics/cyber-threats-and-advisories/information-sharing/cyber-incident-reporting-critical-infrastructure-act-2022-circia"
+              target="_blank"
+              rel="noreferrer"
+            >
+              cisa.gov/CIRCIA
+            </a>
+            .
+          </P>
+          <P>
+            <strong>Adjacent frameworks the same primitives satisfy:</strong> EO 14028 + OMB M-22-18
+            (federal supply-chain attestation), NIST 800-53 Rev 5 SI-7 (software, firmware, and
+            information integrity), CM-2/CM-3/CM-6/CM-8 (configuration management + inventory), AU-2
+            through AU-10 (audit + tamper-evident logs), SR-4 (provenance). Each maps onto the same{' '}
+            <code>(digest, profile, result_hash)</code> receipt the rest of this page walks through.
+          </P>
+        </Deeper>
+      </Section>
 
       <Paper variant="outlined" sx={{ p: 2 }} data-tour="explain-toc">
         <Typography variant="overline" color="text.secondary">
@@ -434,7 +699,7 @@ export function Explain() {
 
       {/* ─── 1. The receipt ────────────────────────────────────────── */}
       <Section
-        n={1}
+        n={5}
         icon={<VerifiedIcon color="primary" />}
         title="The receipt — three fields, no trust required"
       >
@@ -485,7 +750,7 @@ attestation.compliance.result_hash  ─── BLAKE3 over the deterministic
 
       {/* ─── 2. What a merkle tree is ──────────────────────────────── */}
       <Section
-        n={2}
+        n={6}
         icon={<AccountTreeIcon color="primary" />}
         title="What a merkle tree is — pairwise hashing, all the way up"
       >
@@ -527,7 +792,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 3. Cartorio's dual-tree shape ─────────────────────────── */}
       <Section
-        n={3}
+        n={7}
         icon={<HubIcon color="primary" />}
         title="Cartorio's dual-tree shape — what IS, plus what HAPPENED"
       >
@@ -589,7 +854,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 4. Modifier matrix ────────────────────────────────────── */}
       <Section
-        n={4}
+        n={8}
         icon={<GavelIcon color="primary" />}
         title="Modifier matrix — who is allowed to do what"
       >
@@ -641,7 +906,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 5. Flow A — admit ─────────────────────────────────────── */}
       <Section
-        n={5}
+        n={9}
         icon={<UploadIcon color="primary" />}
         title="Flow A — admit (publisher → cartorio)"
       >
@@ -705,7 +970,7 @@ compare: root == pinned_root  →  proof verifies`}</Diagram>
 
       {/* ─── 6. Flow B — verify offline ─────────────────────────────── */}
       <Section
-        n={6}
+        n={10}
         icon={<SearchIcon color="primary" />}
         title="Flow B — verify offline (consumer → cartorio → pure function)"
       >
@@ -793,7 +1058,7 @@ async fn check_artifact_admitted(
 
       {/* ─── 7. Flow C — tamper rejection ────────────────────────── */}
       <Section
-        n={7}
+        n={11}
         icon={<BlockIcon color="primary" />}
         title="Flow C — tamper rejection (the table that pays the rent)"
       >
@@ -863,7 +1128,7 @@ async fn check_artifact_admitted(
 
       {/* ─── 8. Four-repo chain ──────────────────────────────────── */}
       <Section
-        n={8}
+        n={12}
         icon={<LinkIcon color="primary" />}
         title="The four-repo chain — provas / tabeliao / cartorio / lacre"
       >

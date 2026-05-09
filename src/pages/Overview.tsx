@@ -11,13 +11,23 @@ export function Overview() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" gutterBottom>
-          openclaw proof chain &mdash; overview
+          A notebook that proves what was running, when it was last checked, and that nobody quietly
+          edited the record.
         </Typography>
-        <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
-          Every artifact in this ledger has a transferable receipt: a{' '}
-          <strong>(digest, profile, result_hash)</strong> triple anyone can re-derive from the
-          public manifest bytes plus the public <code>provas</code> pack source. Cartorio is the
-          source of truth.
+        <Typography color="text.secondary" sx={{ maxWidth: 760, mb: 1 }}>
+          When something on your network gets compromised, regulators want to know — within hours —
+          which version of which software was running, when you last verified it was safe, and where
+          its parts came from. This system records every compliance check so those questions answer
+          themselves, instantly and verifiably. Built for the incident-response timescales coming
+          with <strong>CIRCIA</strong> (the Cyber Incident Reporting for Critical Infrastructure Act
+          of 2022; CISA&apos;s final rule expected May 2026).
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760 }}>
+          The <strong>system</strong> shown here is the notebook keeper and its supporting tools
+          (cartorio + provas + tabeliao + lacre). The <strong>artifact</strong> being proven
+          compliant — the <strong>openclaw</strong> agent image and its helm-expressed architecture
+          — is just the demonstration target. The same proof chain works for anything identified by
+          its bytes.
         </Typography>
       </Box>
 
