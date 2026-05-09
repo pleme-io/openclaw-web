@@ -837,6 +837,93 @@ export function Explain() {
             registry, cannot be pulled, cannot run.
           </P>
         </Deeper>
+
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            mt: 3,
+            borderLeftWidth: 4,
+            borderLeftColor: 'success.main',
+            bgcolor: 'success.50',
+          }}
+        >
+          <Typography variant="overline" color="success.dark" sx={{ fontWeight: 700 }}>
+            Live result — this isn&apos;t a hypothetical
+          </Typography>
+          <Typography variant="h6" sx={{ mt: 1, mb: 2, fontWeight: 600 }}>
+            We ran this exact gate against the real openclaw on 2026-05-08. Both the failure case
+            and the success case landed in cartorio&apos;s ledger.
+          </Typography>
+          <Typography sx={{ mb: 2 }}>
+            We pulled the upstream <code>ghcr.io/openclaw/openclaw:latest</code> linux/amd64
+            manifest (sha256:59bed2fa…), ran the actual <code>fedramp-high-openclaw-image@2</code>{' '}
+            pack against it, and watched the chain do its job:
+          </Typography>
+
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Chip label="✗ blocked" size="small" color="error" />
+              <Box>
+                <Typography fontWeight={600}>
+                  Upstream openclaw (as shipped) — fails 5 specific FedRAMP-High tests
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.8rem', my: 0.5 }}
+                >
+                  digest sha256:59bed2fa7d8f2953dd6fdb4b9adf00a40c5a57b38cdf5e0ca40d916d610f1a14
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Missing OCI annotations: <code>created</code> (NIST AU-2), <code>source</code>{' '}
+                  (CM-7), <code>revision</code> (SR-3), <code>version</code> (SI-2), and a SLSA
+                  provenance reference. Tabeliao fail-closed before the bytes ever reached cartorio.
+                  A second attempt, this time bypassing tabeliao to forge the admission directly,
+                  was caught by cartorio&apos;s state-leaf invariant — visible right now on the{' '}
+                  <Button component={Link} to="/rejected" size="small">
+                    Rejected
+                  </Button>{' '}
+                  tab as <code>openclaw-upstream-as-shipped</code>.
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Chip label="✓ admitted" size="small" color="success" />
+              <Box>
+                <Typography fontWeight={600}>
+                  pleme-io rewrap variant — passes all 13 tests, real pack_hash baked in
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.8rem', my: 0.5 }}
+                >
+                  digest sha256:f405deaf766640bf8fe8f418aa4c9fe6dbe057cdfd9d5450ad20e607d2556111
+                  <br />
+                  result_hash 553e63bc3904bdb5903985d3add076aee1e314c06a5c3e3783bee771e592483e
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Same upstream layers, repackaged with the five required annotations. The pack ran
+                  green; tabeliao admitted; cartorio&apos;s ledger root advanced. Visible right now
+                  on the{' '}
+                  <Button component={Link} to="/artifacts" size="small">
+                    Artifacts
+                  </Button>{' '}
+                  tab as <code>openclaw-fedramp-rewrap@1.0.0</code>.
+                </Typography>
+              </Box>
+            </Stack>
+          </Stack>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2.5 }}>
+            Both records are reproducible. Anyone with the upstream digest, the public provas pack
+            source, and tabeliao can re-run the same audit and land on the same{' '}
+            <code>result_hash</code>. The proof is constructive, the failures are nameable, the gate
+            is real.
+          </Typography>
+        </Paper>
       </Section>
 
       <Section n={5} icon={<GavelIcon color="primary" />} title="CIRCIA — the regulatory frame">
