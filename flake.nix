@@ -33,7 +33,7 @@
     # we materialize a merged source tree (mergedHanabiSrc) before
     # running crate2nix. Lilitu's web-services.nix is the reference.
     hanabi = {
-      url = "github:pleme-io/hanabi/7b8944b31396d15532aecdbd54100d7a4908fec5";
+      url = "github:pleme-io/hanabi";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
       inputs.crate2nix.follows = "crate2nix";
@@ -42,7 +42,7 @@
     };
 
     libraries = {
-      url = "github:pleme-io/libraries/f22542ef27413a0d5a0c86377d80d92c4b31c9e7";
+      url = "github:pleme-io/libraries";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
