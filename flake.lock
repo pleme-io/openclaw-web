@@ -1711,11 +1711,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780514678,
-        "narHash": "sha256-LxtfeDXYPdVE67QUCMTAOh+MjsTzQE/+Q5I9u9Kw6J8=",
+        "lastModified": 1780519522,
+        "narHash": "sha256-XoYSVJ1X6tmRNveATZzfa7n6nKiRwHXL5VNH85W2nvs=",
         "owner": "pleme-io",
         "repo": "hanabi",
-        "rev": "5a5fd9ba4a3fb687deaba969fd482b79cc20b73a",
+        "rev": "17cc4a2759a1596af03db263fe188743d8bcdfcf",
         "type": "github"
       },
       "original": {
