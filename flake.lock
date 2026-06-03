@@ -492,11 +492,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1780316214,
-        "narHash": "sha256-X3EG0oxt03MegwC/MnQv1saoq9nphEGSSGEAj8mZQOg=",
+        "lastModified": 1780459148,
+        "narHash": "sha256-oIpiel88r8zV/WqTFwcGAjWXKOASHNzq7wjXQ6ORTvg=",
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "d5e9138bae90fe199fbe5de7675014d76d28873b",
+        "rev": "493ed7ef062ba3972c06e60970fe5ebe014f5c33",
         "type": "github"
       },
       "original": {
@@ -1087,11 +1087,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780444002,
-        "narHash": "sha256-G+bW4GyiNtHyRlfopWE0JwCNzqZNq/HmkUT5/CC9PEw=",
+        "lastModified": 1780458847,
+        "narHash": "sha256-MqBZYU+LqkSho6LqJUdLti+TJ0Q8/sMkMXiEmN6KGKE=",
         "owner": "pleme-io",
         "repo": "forge",
-        "rev": "3652af5931665571c0e7ae2ef6a2af7f590471b1",
+        "rev": "36d90b620ae5d251ca6bd5a91bc9e2c9284fdd95",
         "type": "github"
       },
       "original": {
@@ -1711,11 +1711,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780447864,
-        "narHash": "sha256-TLpO9JZl7oGAcYTH+XBLDxb9ZDYfo9QvBxCPr9W+iGQ=",
+        "lastModified": 1780460894,
+        "narHash": "sha256-VrojV6JV2/GwjjJPvNCTtbTg1lSdt7IFUEGSe4ZC4pU=",
         "owner": "pleme-io",
         "repo": "hanabi",
-        "rev": "34edecbe35016568d5781f9be06caeb624ddc1ca",
+        "rev": "3fd63cb1c470b4c3b1cb7ae05e131f1b30df9c89",
         "type": "github"
       },
       "original": {
