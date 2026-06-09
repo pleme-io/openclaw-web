@@ -2,7 +2,7 @@
   description = "openclaw-web — public read-only browser view of the proof chain";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.follows = "substrate/nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     fenix = {
@@ -16,7 +16,6 @@
 
     substrate = {
       url = "github:pleme-io/substrate";
-      inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
     };
 
